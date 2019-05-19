@@ -9,6 +9,7 @@
 #ifndef HtnOperator_hpp
 #define HtnOperator_hpp
 #include <memory>
+#include <string>
 #include <vector>
 class HtnTerm;
 

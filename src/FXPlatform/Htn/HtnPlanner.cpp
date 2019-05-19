@@ -5,7 +5,7 @@
 //  Created by Eric Zinda on 1/7/19.
 //  Copyright © 2019 Eric Zinda. All rights reserved.
 //
-
+#include <algorithm>
 #include "Logger.h"
 #include "HtnGoalResolver.h"
 #include "HtnMethod.h"
@@ -769,7 +769,7 @@ shared_ptr<HtnPlanner::SolutionType> HtnPlanner::FindNextPlan(PlanState *planSta
                         // Subtract off current memory usage from budget to tell Resolve how much it has to work with
                         int64_t currentMemory = planState->dynamicSize();
                         int64_t resolverMemory = 0;
-                        node->conditionResolutions = m_resolver.ResolveAll(factory, node->state.get(), *substitutedCondition, stack->size() + 1, memoryBudget - currentMemory, &resolverMemory);
+                        node->conditionResolutions = m_resolver.ResolveAll(factory, node->state.get(), *substitutedCondition, (int) (stack->size() + 1), (int) (memoryBudget - currentMemory), &resolverMemory);
                         planState->CheckHighestMemory(currentMemory + resolverMemory, "Resolver", resolverMemory);
                         if(factory->outOfMemory())
                         {

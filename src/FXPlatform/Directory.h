@@ -1,5 +1,6 @@
 #pragma once
 #include "FXPlatform/FileStream.h"
+#include <memory>
 #include <string>
 #include <vector>
 

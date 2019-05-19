@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 #include <string>
+#include <stdexcept>
+
 class TraceError : public std::runtime_error
 {
 public:

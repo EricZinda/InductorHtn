@@ -4,4 +4,5 @@ target_sources(lib
     	FileStream_iOS.mm
     	Logger_iOS.mm
     	Stopwatch_iOS.cpp
+	TraceError_iOS.cpp
 )

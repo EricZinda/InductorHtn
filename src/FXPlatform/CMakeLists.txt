@@ -11,8 +11,7 @@ target_sources(lib
         Stopwatch.h
     	SystemTraceType.h
         TraceError.h
-        TraceError.cpp
-    	Utilities.h
+        Utilities.h
     	Utilities.cpp
 )
 target_include_directories(lib PRIVATE ./)

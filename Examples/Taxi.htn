@@ -1,0 +1,30 @@
+have-taxi-fare(?distance) :- have-cash(?m), >=(?m, +(1.5, ?distance)).
+walking-distance(?u,?v) :- weather-is(good), distance(?u,?v,?w), =<(?w, 3).
+walking-distance(?u,?v) :- distance(?u,?v,?w), =<(?w, 0.5).
+
+/* Methods */
+pay-driver(?fare) :- if(have-cash(?m), >=(?m, ?fare)), do(set-cash(?m, -(?m,?fare))).
+travel-to(?q) :- if(at(?p), walking-distance(?p, ?q)), do(walk(?p, ?q)).
+/* Use first() so we only hail one taxi */
+travel-to(?y) :- if(first(at(?x), at-taxi-stand(?t, ?x), distance(?x, ?y, ?d), have-taxi-fare(?d))), do(hail(?t,?x), ride(?t, ?x, ?y), pay-driver(+(1.50, ?d))).
+travel-to(?y) :- if(at(?x), bus-route(?bus, ?x, ?y)), do(wait-for(?bus, ?x), pay-driver(1.00), ride(?bus, ?x, ?y)).
+
+/* Operators */
+hail(?vehicle, ?location) :- del(), add(at(?vehicle, ?location)).
+wait-for(?bus, ?location) :- del(), add(at(?bus, ?location)).
+ride(?vehicle, ?a, ?b) :- del(at(?a), at(?vehicle, ?a)), add(at(?b), at(?vehicle, ?b)).
+set-cash(?old, ?new) :- del(have-cash(?old)), add(have-cash(?new)).
+walk(?here, ?there) :- del(at(?here)), add(at(?there)).
+
+/* State */
+distance(downtown, park, 2).
+distance(downtown, uptown, 8).
+distance(downtown, suburb, 12).
+at-taxi-stand(taxi1, downtown).
+at-taxi-stand(taxi2, downtown).
+bus-route(bus1, downtown, park).
+bus-route(bus2, downtown, uptown).
+bus-route(bus3, downtown, suburb).
+at(downtown).
+weather-is(good).
+have-cash(12).

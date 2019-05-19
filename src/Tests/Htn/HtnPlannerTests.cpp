@@ -1061,7 +1061,7 @@ SUITE(HtnPlannerTests)
         //        SetTraceFilter((int) SystemTraceType::Solver | (int) SystemTraceType::Planner, TraceDetail::Diagnostic);
         //        SetTraceLevelOfDetail(TraceDetail::Diagnostic);
         
-        // Original(ish) data
+        // Original(ish) data from: http://www.cs.umd.edu/projects/shop/description.html
         //        ";;; To have enough money for a taxi, we need at least $1.50 + $1 for each mile to be traveled.\r\n" +
         //        "(:- (have-taxi-fare ?dist) ((have-cash ?m) (eval (>= ?m (+ 1.5 ?dist)))))\r\n" +
         //        ";;; We are within walking distance of our destination if the weather is good and the distance is 3 miles, or if the weather is bad and the distance is 1/2 mile.\r\n" +

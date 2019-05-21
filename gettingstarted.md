@@ -2,7 +2,15 @@
 # Getting Started
 Read readme.md for background on the engine and how to build, this document describes how to use it if you think it is right for you.
 
-Hierarchical Task Networks are a proven model for solving many AI Planning problems and they've been around for a long time. One such problem is building an AI player for a strategy game. That's what the Inductor HTN Engine was originally built for and where it was first used in production.  It uses Prolog as a primary part of its language and the [Inductor Prolog Engine](https://github.com/EricZinda/InductorProlog) as part of its runtime engine.
+## Optimal Problems for HTNs
+
+Hierarchical Task Networks are a proven model for solving many AI Planning problems and they've been around for a long time. I've found that they are a good solution if you need an engine that can create a plan in a complex problem space where doing an exhaustive search (or an approximation of it) to solve the problem simply isn't an option AND where you have an expert that knows the right answer (or a good enough answer), because they're going to have to code up the rules.  Your HTN will only do its job as well as the best person you have writing the rules, if they are applying their best strategy with no mistakes.
+
+Some examples where I think HTN's *shouldn't* be used:
+- Two-person zero-sum games with perfect information (Chess, Checkers, etc.), I suspect that some variant of the [minimax algorithm](https://en.wikipedia.org/wiki/Minimax) is going to be your best bet.  This does some variant of an exhaustive search, or close enough for many purposes.
+- 
+
+They were a great solution for [Exospecies](www.exospecies.com) because it is a complex game with resource management and the high cost of calculating a turn makes running lots of scenarios (like minimax) impossible.  An approach that used rules written by an expert was the best I was going to do. That's what the Inductor HTN Engine was originally built for and where it was first used in production.  It uses Prolog as a primary part of its language and the [Inductor Prolog Engine](https://github.com/EricZinda/InductorProlog) as part of its runtime engine.
 
 ## Background Reading
 - For an overview of what an HTN is read: https://www.exospecies.com/blog/htnoverview
@@ -21,7 +29,10 @@ There are three steps to using this engine in an application:
 To make it easy to prototype or try out the engine, by default the build system builds an interactive mode application called indhtn. The next section describes how to use it.
 
 ## Using Interactive Mode
-The easiest way to use interactive mode is to create a single file with a `.htn` extension and pass it on the command line. You can write down the facts that will be input to the engine, the HTN Axioms, Methods, and Operators that are your HTN logic and run it interactively. Let's imagine a simple tile-based game akin to Chess that has a simple set of rules:
+The easiest way to use interactive mode is to create a single file with a `.htn` extension and pass it on the command line. You can write down the facts that will be input to the engine, the HTN Axioms, Methods, and Operators that are your HTN logic and run it interactively. 
+
+## An Example
+Let's take the [Exospecies](www.exospecies.com) game and boil it down to be simple enough for an example. We'll design an AI for a simple tile-based game akin to Chess that has a simple set of rules:
 
 - The game "map" consists of tiles all connected in a square
 - The game consists of units, a tile can only hold one unit
@@ -30,7 +41,11 @@ The easiest way to use interactive mode is to create a single file with a `.htn`
 - The rest of the units are pawns that can move one square at a time.
 - You each start one two ends of the map
 
-Imagine you have written a game meant to be played on a PC, iPhone, etc and you want to write a computer player.  Let's go through the process.
+Imagine you have written a game meant to be played on a PC, iPhone, etc and you want to write a computer player.  
+
+NOTE: As I said above, this is a perfect scenario for an algorithm called Minimax, and that algorithm will probably generate a *much* better AI in a shorter time.  However, I am using it as a proxy for a "complicated strategy game that can't be solved using Minimax". 
+
+Let's go through the process.
 
 ### Converting the game state into Prolog facts
 First you need to represent the game in a form the HTN engine can understand, Prolog facts. Representing the tiles is pretty easy, let's just invent a term called `tile` that has an X and Y coordinate.  Each term we have declares that a tile exists.  Here's a 4x4 map:
@@ -65,34 +80,32 @@ There are many approaches to use for breaking the problem down, but the approach
 
 So, in English:
 
-0. If there are no pawns near our king, move one back to guard it
-1. If someone is near our King, attack them.
-2. If we are next to the king, attack it.
+0. If someone is near our King, attack them.
+1. If we are next to the king, attack it.
+1. If there are no pawns near our king, move one back to guard it
 3. If we next to an opponent's unit, attack it.
 4. Otherwise, go towards the king
 
-#### defendKing 
-Let's start with method 0, if we don't have a king "near" the pawn, we'll move the closest one to it:
+
+#### attackKingAttackers
+Our highest priority thing to do is to attack any units that are about to attack our king. In pedantic English this would be "If a unit is next to our king, attack it with any unit near it".  Note that there are better and worse units to pick, based on the rest of the board layout, but we're going to keep it simple:
 ~~~
-defendKing(?Player) :- 
+attackKingAttackers(?Player) :-
 	if(
 		% Get our king
 		unit(?King, King, ?Player),
-		% If there are NOT any pawns around it...
-		not(
-			% Get all Units in Range
-			unitsInRange(?King, 1, ?Unit),
-			% that are pawns we own
-			unit(?Unit, Pawn, ?Player)
-		)
-	), 
-	do(moveClosestPawnNearKing(?Player, ?King)).
+		% Get all Units around it
+		unitsInRange(?King, 1, ?Unit),
+		% that are enemy pawns
+		unit(?Unit, Pawn, ?UnitPlayer),
+		\\==(?UnitPlayer, ?Player)
+	),
+	do(attackUnit(?Unit)).
 ~~~
+Pretty straightforward. We have an `unitsInRange` Axiom to implement and a `attackUnit` method to implement to make this work.
 
-Notice we are using an Axiom (i.e. Prolog rule) here called `unitsInRange` and a Method called `moveClosestPawnNearKing` that we need to define now.  Methods are how HTNs decompose a problem into smaller parts.  This says "If you want to defend the king when it is undefended, you'll need to move the closest pawn near it".  That Method will decompose the problem even further.
-
-#### unitsInRange
-Let's start with `unitsInRange1`. We need to get all the valid tiles around the king that are "in range" and return any units that are on them. This is a case where the large Internet community of Prolog programmers is very useful.  I needed a way to have Prolog generate a sequence of numbers which, it turns out, isn't completely obvious. The Internet helped:
+##### unitsInRange
+Let's start with `unitsInRange`. We need to get all the valid tiles around the king that are "in range" and return any units that are on them. This is a case where the large Internet community of Prolog programmers is very useful.  I needed a way to have Prolog generate a sequence of numbers which, it turns out, isn't completely obvious. The Internet helped:
 ~~~
 % Prolog trick that generates a series of numbers
 gen(?Cur, ?Top, ?Cur) :- =<(?Cur, ?Top).
@@ -154,6 +167,156 @@ unitsInRange(?Unit, ?Range, ?InRangeUnit) :-
 	% Return a unit if it is on the tile
 	at(?InRangeUnit, ?Tile).
 ~~~
+
+##### attackUnit
+To finish the `attackKingAttackers` Method:
+~~~
+attackKingAttackers(?Player) :-
+	if(
+		% Get our king
+		unit(?King, King, ?Player),
+		% Get all Units around it
+		unitsInRange(?King, 1, ?Unit),
+		% that are enemy pawns
+		unit(?Unit, Pawn, ?UnitPlayer),
+		\\==(?UnitPlayer, ?Player)
+	),
+	do(attackUnit(?Unit)).
+~~~
+We need to implement the `attackUnit` Method.  Simplest approach here is to say "If we have a unit adjascent, attack with it":
+~~~
+attackUnit(?EnemyUnit) :-
+	if(
+		% Get the Enemy Team and position
+		unit(?EnemyUnit, ?Type, ?EnemyPlayer),
+		at(?EnemyUnit, ?EnemyTile),
+		% Get all the units adjascent to ?EnemyUnit
+		unitsInRange(?EnemyUnit, 1, ?Unit),
+		% that are Units of any kind
+		unit(?Unit, ?Type, ?Player),
+		% on the other team
+		\\==(?Player, ?EnemyPlayer),
+		% Get its position
+		at(?Unit, ?UnitTile)
+	),
+	do(captureUnit(?EnemyUnit, ?EnemyTile), doMove(?Unit, ?UnitTile, ?EnemyTile)).
+~~~
+In the `do()` clause are our first Operators.  This is the level where there are no more problems to break down, we just need to remove a piece and move. An operator changes the state of the world in some way.  In this case, by changing the facts about a unit's position and removing the enemy piece from the board:
+~~~
+% Operator that removes a piece from the map
+captureUnit(?EnemyUnit, ?Tile) :- 
+	del(at(?EnemyUnit, ?Tile)), add().
+
+% Operator that actually does a move
+doMove(?Unit, ?Current, ?Destination) :- 
+	del(at(?Unit, ?Current)), add(at(?Unit, ?Destination)).
+~~~
+
+##### Finalizing attackUnit
+
+So here is all the code to implement `attackUnit`.  I've modified the board so we can do some attacking!
+
+~~~
+% Layout of the map that never needs to change
+tile(0,0).tile(1,0).tile(2,0).tile(3,0).tile(4,0).
+tile(0,1).tile(1,1).tile(2,1).tile(3,1).tile(4,1).
+tile(0,2).tile(1,2).tile(2,2).tile(3,2).tile(4,2).
+tile(0,3).tile(1,3).tile(2,3).tile(3,3).tile(4,3).
+tile(0,4).tile(1,4).tile(2,4).tile(3,4).tile(4,4).
+
+% Position of units which will change each turn
+unit(King2-4, King, Player1). at(King2-4, tile(2, 4)).
+unit(Pawn1-4, Pawn, Player1). at(Pawn1-4, tile(1, 4)).
+unit(Pawn3-4, Pawn, Player1). at(Pawn3-4, tile(3, 4)).
+unit(Pawn2-3, Pawn, Player1). at(Pawn2-3, tile(2, 3)).
+
+unit(King2-0, King, Player2). at(King2-0, tile(2, 0)).
+unit(Pawn2-2, Pawn, Player2). at(Pawn2-2, tile(2, 2)).
+unit(Pawn1-3, Pawn, Player2). at(Pawn1-3, tile(1, 3)).
+
+attackUnit(?EnemyUnit) :-
+	if(
+		% Get the Enemy Team and position
+		unit(?EnemyUnit, ?Type, ?EnemyPlayer),
+		at(?EnemyUnit, ?EnemyTile),
+		% Get all the units adjascent to ?EnemyUnit
+		unitsInRange(?EnemyUnit, 1, ?Unit),
+		% that are Units of any kind
+		unit(?Unit, ?Type, ?Player),
+		% on the other team
+		\\==(?Player, ?EnemyPlayer),
+		% Get its position
+		at(?Unit, ?UnitTile)
+	),
+	do(captureUnit(?EnemyUnit, ?EnemyTile), doMove(?Unit, ?UnitTile, ?EnemyTile)).
+	
+% Operator that removes a piece from the map
+captureUnit(?EnemyUnit, ?Tile) :- 
+	del(at(?EnemyUnit, ?Tile)), add().
+
+% Operator that actually does a move
+doMove(?Unit, ?Current, ?Destination) :- 
+	del(at(?Unit, ?Current)), add(at(?Unit, ?Destination)).
+
+unitsInRange(?Unit, ?Range, ?InRangeUnit) :- 
+	% Get the location of the unit
+	at(?Unit, ?UnitTile),
+	% Get all the tiles within ?Range squares of it
+	filledSquare(1, ?Range, ?UnitTile, ?Tile),
+	% Return a unit if it is on the tile
+	at(?InRangeUnit, ?Tile).
+
+% Prolog trick that generates a series of numbers
+gen(?Cur, ?Top, ?Cur) :- =<(?Cur, ?Top).
+gen(?Cur, ?Top, ?Next):- =<(?Cur, ?Top), is(?Cur1, +(?Cur, 1)), gen(?Cur1, ?Top, ?Next).
+
+% hLine and vLine create a set of tiles in a line vertically or horizontally
+hLineTile(?X1,?X2,?Y,tile(?S,?T)) :- gen(?X1,?X2,?S), tile(?S,?Y), is(?T,?Y).
+vLineTile(?X,?Y1,?Y2,tile(?S,?T)) :- gen(?Y1,?Y2,?T), tile(?X,?T), is(?S,?X).
+
+% Square generates a square by using the trick that Prolog unifies with ALL rules, so it will get all 4 rules, each representing an edge of the square
+square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?Y1, -(?Y, ?R)), is(?X1,-(?X,?R)),is(?X2, +(?X,?R)), hLineTile(?X1, ?X2, ?Y1, tile(?S,?T)).
+square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?Y1, +(?Y, ?R)), is(?X1,-(?X,?R)),is(?X2, +(?X,?R)), hLineTile(?X1, ?X2, ?Y1, tile(?S,?T)).
+square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?X1, -(?X,?R)), is(?Y1,-(?Y,-(?R,1))), is(?Y2, +(?Y, -(?R,1))), vLineTile(?X1, ?Y1, ?Y2, tile(?S,?T)).
+square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?X1, +(?X,?R)), is(?Y1,-(?Y,-(?R,1))), is(?Y2, +(?Y, -(?R,1))), vLineTile(?X1, ?Y1, ?Y2, tile(?S,?T)).
+
+filledSquare(?Min,?Max,tile(?X,?Y),tile(?S,?T)) :- =<(?Min, ?Max), square(tile(?X,?Y),?Min,tile(?S,?T)).
+filledSquare(?Min,?Max,tile(?X,?Y),tile(?S,?T)) :- =<(?Min, ?Max), is(?Min1, +(?Min, 1)), filledSquare(?Min1,?Max,tile(?X,?Y),tile(?S,?T)).
+
+?- goals(attackUnit(King2-4)).
+>> null
+
+?- goals(attackUnit(Pawn2-3)).
+>> [ { (captureUnit(Pawn2-3,tile(2,3)), doMove(Pawn2-2,tile(2,2),tile(2,3))) } { (captureUnit(Pawn2-3,tile(2,3)), doMove(Pawn1-3,tile(1,3),tile(2,3))) } ]
+~~~
+Trying `attackUnit`with the king failed, but with Pawn2-3 it returned two different solutions because two of our pawns could attack it.  We always pick the first solution to actually use since it will usually be the best as you'll see later.
+
+#### defendKing 
+Referring back to our priorities for the AI:
+0. (Done!) If someone is near our King, attack them.
+1. If we are next to the king, attack it.
+2. If there are no pawns near our king, move one back to guard it
+3. If we next to an opponent's unit, attack it.
+4. Otherwise, go towards the king
+
+Method 1 will be very analogous to Method 0, so let's implement Method 2 instead: if we don't have a king "near" the pawn, we'll move the closest one to it:
+~~~
+defendKing(?Player) :- 
+	if(
+		% Get our king
+		unit(?King, King, ?Player),
+		% If there are NOT any pawns around it...
+		not(
+			% Get all Units in Range
+			unitsInRange(?King, 1, ?Unit),
+			% that are pawns we own
+			unit(?Unit, Pawn, ?Player)
+		)
+	), 
+	do(moveClosestPawnNearKing(?Player, ?King)).
+~~~
+
+Notice we are using a new Axiom here called`moveClosestPawnNearKing` that we need to define now.  
 
 #### moveClosestPawnNearKing
 How do we find the closest pawn? First approximation: Get all the pawns, get their distance, sort it so we get the best ones first.
@@ -253,8 +416,10 @@ moveClosestPawnNearKing(?Player, ?King) :-
 ~~~
 Note that, because we are returning a lot of alternatives from things like `nextTilesOnPath` and `closestSurroundingTilesToTile`, we can get duplicates, so we use the `distinct` rule to clear those out.  Also, because many of the alternatives are not the "best" alternatives, we resort it is as well.
 
-The `do()` clause is using an operator `tryMove()` that we need to implement. This will check to make sure a move is legal:
+The `do()` clause is using an operator `tryMove()` that we need to implement. This will check to make sure a move is legal since there could be a unit in that location.
 
+#### tryMove
+We can't just call an operator at this point, because 
 ~~~
 % Only move if it is valid
 tryMove(?Unit, ?Destination) :-
@@ -436,3 +601,37 @@ filledSquare(?Min,?Max,tile(?X,?Y),tile(?S,?T)) :- =<(?Min, ?Max), is(?Min1, +(?
 >> [ { (doMove(Pawn2-2,tile(2,2),tile(1,1))) } { (doMove(Pawn2-2,tile(2,2),tile(2,1))) } { (doMove(Pawn2-2,tile(2,2),tile(3,1))) } { (doMove(Pawn2-2,tile(2,2),tile(1,2))) } { (doMove(Pawn2-2,tile(2,2),tile(3,2))) } { (doMove(Pawn2-2,tile(2,2),tile(2,3))) } { (doMove(Pawn2-2,tile(2,2),tile(1,3))) } { (doMove(Pawn2-2,tile(2,2),tile(3,3))) } ]
 ~~~
 the `defendKing()` method fails, as expected, for Player1 since it is already being defended, and returns a bunch of alternative solutions, best to worst for Player2.
+
+### Combining defendKing and attackKingAttackers
+So now we have these to top level Methods, how do we combine them to have a single AI? Since it is either one or the other, and we want to do them in priority order, we can use the `else` modifier of a method like this:
+~~~
+% Perform the top level AI in order of priority using 'else'
+% so that only one thing happens
+doAI(?Player) : - if(), do(attackKingAttackers(?Player)).
+doAI(?Player) : - else, if(), do(defendKing(?Player)).
+~~~
+Now if we set up the world like this and run the AI:
+~~~
+% Position of units which will change each turn
+unit(King2-4, King, Player1). at(King2-4, tile(2, 4)).
+unit(Pawn2-1, Pawn, Player1). at(Pawn2-1, tile(2, 1)).
+unit(King2-0, King, Player2). at(King2-0, tile(2, 0)).
+unit(Pawn2-2, Pawn, Player2). at(Pawn2-2, tile(2, 2)).
+unit(Pawn1-3, Pawn, Player2). at(Pawn1-3, tile(1, 3)).
+
+?- goals(doAI(Player2)).
+>> [ { (captureUnit(Pawn2-1,tile(2,1)), doMove(Pawn2-2,tile(2,2),tile(2,1))) } ]
+~~~
+The AI correctly says to capture Pawn2-1 with Pawn2-2 since it was going to take our King.
+
+If we instead set it up like this:
+~~~
+% Position of units which will change each turn
+unit(King2-4, King, Player1). at(King2-4, tile(2, 4)).
+unit(King2-0, King, Player2). at(King2-0, tile(2, 0)).
+unit(Pawn4-3, Pawn, Player2). at(Pawn4-3, tile(4, 3)).
+
+?- goals(doAI(Player2)).
+>> [ { (doMove(Pawn4-3,tile(4,3),tile(3,2))) } { (doMove(Pawn4-3,tile(4,3),tile(4,2))) } { (doMove(Pawn4-3,tile(4,3),tile(3,3))) } { (doMove(Pawn4-3,tile(4,3),tile(3,4))) } { (doMove(Pawn4-3,tile(4,3),tile(4,4))) } ]
+~~~
+The AI correctly tries to move a pawn back to guard the king, and gives us a few alternatives (we'll always pick the first because it should be best).

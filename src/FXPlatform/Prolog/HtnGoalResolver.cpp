@@ -442,7 +442,7 @@ HtnGoalResolver::HtnGoalResolver()
     AddCustomRule("write", std::bind(&HtnGoalResolver::RuleWrite, std::placeholders::_1));
     AddCustomRule("writeln", std::bind(&HtnGoalResolver::RuleWrite, std::placeholders::_1));
     AddCustomRule("==", std::bind(&HtnGoalResolver::RuleTermCompare, std::placeholders::_1));
-    AddCustomRule("\\==", std::bind(&HtnGoalResolver::RuleTermCompare, std::placeholders::_1));
+    AddCustomRule("\\\\==", std::bind(&HtnGoalResolver::RuleTermCompare, std::placeholders::_1));
     AddCustomRule("=", std::bind(&HtnGoalResolver::RuleUnify, std::placeholders::_1));
 }
 
@@ -1855,7 +1855,7 @@ void HtnGoalResolver::RuleTermCompare(ResolveState *state)
                 // No resolution happens beyond what has already happened
                 bool isEqual = (*currentNode->currentGoal()->arguments()[0]) == (*currentNode->currentGoal()->arguments()[1]);
                 string opName = currentNode->currentGoal()->name();
-                if((isEqual && opName == "==") || (!isEqual && opName == "\\=="))
+                if((isEqual && opName == "==") || (!isEqual && opName == "\\\\=="))
                 {
                     Trace1("           ", "{0} succeeded", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
                     

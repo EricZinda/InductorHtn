@@ -7,16 +7,52 @@ tile(0,4).tile(1,4).tile(2,4).tile(3,4).tile(4,4).
 
 % Position of units which will change each turn
 unit(King2-4, King, Player1). at(King2-4, tile(2, 4)).
-unit(Pawn1-4, Pawn, Player1). at(Pawn1-4, tile(1, 4)).
-unit(Pawn3-4, Pawn, Player1). at(Pawn3-4, tile(3, 4)).
-unit(Pawn2-3, Pawn, Player1). at(Pawn2-3, tile(2, 3)).
+%unit(Pawn1-4, Pawn, Player1). at(Pawn1-4, tile(1, 4)).
+%unit(Pawn3-4, Pawn, Player1). at(Pawn3-4, tile(3, 4)).
+%unit(Pawn2-3, Pawn, Player1). at(Pawn2-3, tile(2, 3)).
 
+%unit(Pawn2-1, Pawn, Player1). at(Pawn2-1, tile(2, 1)).
 unit(King2-0, King, Player2). at(King2-0, tile(2, 0)).
-unit(Pawn2-2, Pawn, Player2). at(Pawn2-2, tile(2, 2)).
+%unit(Pawn2-2, Pawn, Player2). at(Pawn2-2, tile(2, 2)).
+unit(Pawn4-3, Pawn, Player2). at(Pawn4-3, tile(4, 3)).
 
 %%%
 %%% Methods
 %%%
+
+% Perform the top level AI in order of priority using 'else'
+% so that only one thing happens
+doAI(?Player) :- if(), do(attackKingAttackers(?Player)).
+doAI(?Player) :- else, if(), do(defendKing(?Player)).
+
+attackKingAttackers(?Player) :-
+	if(
+		% Get our king
+		unit(?King, King, ?Player),
+		% Get all Units around it
+		unitsInRange(?King, 1, ?Unit),
+		% that are enemy pawns
+		unit(?Unit, Pawn, ?UnitPlayer),
+		\\==(?UnitPlayer, ?Player)
+	),
+	do(attackUnit(?Unit)).
+
+attackUnit(?EnemyUnit) :-
+	if(
+		% Get the Enemy Team and position
+		unit(?EnemyUnit, ?Type, ?EnemyPlayer),
+		at(?EnemyUnit, ?EnemyTile),
+		% Get all the units adjascent to ?EnemyUnit
+		unitsInRange(?EnemyUnit, 1, ?Unit),
+		% that are Units of any kind
+		unit(?Unit, ?Type, ?Player),
+		% on the other team
+		\\==(?Player, ?EnemyPlayer),
+		% Get its position
+		at(?Unit, ?UnitTile)
+	),
+	do(captureUnit(?EnemyUnit, ?EnemyTile), doMove(?Unit, ?UnitTile, ?EnemyTile)).
+
 defendKing(?Player) :- 
 	if(
 		% Get our king
@@ -71,8 +107,13 @@ tryMove(?Unit, ?Destination) :-
 %%% Operators
 %%%
 
+% Operator that removes a piece from the map
+captureUnit(?EnemyUnit, ?Tile) :- 
+	del(at(?EnemyUnit, ?Tile)), add().
+
 % Operator that actually does a move
-doMove(?Unit, ?Current, ?Destination) :- del(at(?Unit, ?Current)), add(at(?Unit, ?Destination)).
+doMove(?Unit, ?Current, ?Destination) :- 
+	del(at(?Unit, ?Current)), add(at(?Unit, ?Destination)).
 
 %%%
 %%% Axioms

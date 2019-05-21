@@ -1,0 +1,148 @@
+% Layout of the map that never needs to change
+tile(0,0).tile(1,0).tile(2,0).tile(3,0).tile(4,0).
+tile(0,1).tile(1,1).tile(2,1).tile(3,1).tile(4,1).
+tile(0,2).tile(1,2).tile(2,2).tile(3,2).tile(4,2).
+tile(0,3).tile(1,3).tile(2,3).tile(3,3).tile(4,3).
+tile(0,4).tile(1,4).tile(2,4).tile(3,4).tile(4,4).
+
+% Position of units which will change each turn
+unit(King2-4, King, Player1). at(King2-4, tile(2, 4)).
+unit(Pawn1-4, Pawn, Player1). at(Pawn1-4, tile(1, 4)).
+unit(Pawn3-4, Pawn, Player1). at(Pawn3-4, tile(3, 4)).
+unit(Pawn2-3, Pawn, Player1). at(Pawn2-3, tile(2, 3)).
+
+unit(King2-0, King, Player2). at(King2-0, tile(2, 0)).
+unit(Pawn2-2, Pawn, Player2). at(Pawn2-2, tile(2, 2)).
+
+%%%
+%%% Methods
+%%%
+defendKing(?Player) :- 
+	if(
+		% Get our king
+		unit(?King, King, ?Player),
+		% If there are NOT any pawns around it...
+		not(
+			% Get all Units in Range
+			unitsInRange(?King, 1, ?Unit),
+			% that are pawns we own
+			unit(?Unit, Pawn, ?Player)
+		)
+	), 
+	do(moveClosestPawnNearKing(?Player, ?King)).
+
+moveClosestPawnNearKing(?Player, ?King) :- 
+	if(
+		% Get the position of the king
+		at(?King, ?KingTile),
+		% Get the closest pawns and their positions
+		closestPawns(?KingTile, ?Player, ?Pawn), at(?Pawn, ?PawnTile),
+		% Get unique moves sorted by distance since we have alot of alternatives 
+		% and there could be duplicates
+		sortBy(?Distance, <(
+			distinct(?MoveTile, 
+				% Figure out where we should move it
+				closestSurroundingTilesToTile(?PawnTile, ?KingTile, ?ClosestTile),
+				% Get the next tile on the way to ?ClosestTile
+				nextTilesOnPath(?PawnTile, ?ClosestTile, ?MoveTile)
+			),
+			distance(?MoveTile, ?KingTile, ?Distance)
+		))
+	),
+	% Move there
+	do(tryMove(?Pawn, ?MoveTile)).
+
+% Only move if it is valid
+tryMove(?Unit, ?Destination) :-
+	if(
+		% Get current Unit position and Player
+		unit(?Unit, ?UnitType, ?UnitPlayer), at(?Unit, ?Current),
+		% must be only one square away
+		distance(?Current, ?Destination, ?Distance), ==(1, ?Distance),
+		% must not be occupied by our own team
+		not(at(?BlockingUnit, ?Destination), 
+			unit(?BlockingUnit, ?BlockingType, ?BlockingPlayer), 
+			==(?BlockingPlayer, ?UnitPlayer)
+		)
+	),
+	do(doMove(?Unit, ?Current, ?Destination)).
+
+%%%
+%%% Operators
+%%%
+
+% Operator that actually does a move
+doMove(?Unit, ?Current, ?Destination) :- del(at(?Unit, ?Current)), add(at(?Unit, ?Destination)).
+
+%%%
+%%% Axioms
+%%%
+
+% Next tile on the path from X to Y is surely the tile around X that is 
+% closest to Y
+nextTilesOnPath(?FromTile, ?ToTile, ?Tile) :- 
+	% Sort by shortest distance
+	sortBy(?Distance, <(
+		% Get all the tiles around FromTile
+		square(?FromTile, 1, ?Tile),
+		distance(?Tile, ?ToTile, ?Distance)
+	)),
+	% Where the distance to the next tile is 1
+	distance(?FromTile, ?Tile, ?MoveDistance),
+	==(1, ?MoveDistance).
+
+closestSurroundingTilesToTile(?FromTile, ?ToTile, ?Tile) :- 
+	% Get all the tiles around ?ToTile
+	sortBy(?Distance, <(
+		% Get all the tiles around ToTile
+		square(?ToTile, 1, ?Tile),
+		distance(?FromTile, ?Tile, ?Distance)
+	)).
+
+closestPawns(?Tile, ?Player, ?Pawn) :-
+	% Use the built in function sortBy which takes an operator to show which way to sort
+	sortBy(?Distance, <(
+		% Get all of our pawns and their location
+		unit(?Pawn, Pawn, ?Player), at(?Pawn, ?PawnTile),
+		% Get their distance to ?Tile
+		distance(?Tile, ?PawnTile, ?Distance)
+	)).
+
+unitsInRange(?Unit, ?Range, ?InRangeUnit) :- 
+	% Get the location of the unit
+	at(?Unit, ?UnitTile),
+	% Get all the tiles within ?Range squares of it
+	filledSquare(1, ?Range, ?UnitTile, ?Tile),
+	% Return a unit if it is on the tile
+	at(?InRangeUnit, ?Tile).
+
+% Turns out distance on a grid where you move diagnally is just the
+% Max of the Y or X distances...
+distance(?From, ?To, ?Distance) :- 
+	% Pull out the X and Y parts of ?From and ?To so we can calculate with them
+	y(?From, ?FromY), x(?From, ?FromX), y(?To, ?ToY), x(?To, ?ToX), 
+	% Get the difference between the Xs and the Ys
+	is(?DY, abs(-(?ToY, ?FromY))), is(?DX, abs(-(?ToX, ?FromX))), 
+	% The max is the distance
+	is(?Distance, max(?DX, ?DY)). 
+
+% Helper functions that return the X or Y part of a tile
+x(tile(?X, ?Y), ?X) :- .
+y(tile(?X, ?Y), ?Y) :- .
+
+% Prolog trick that generates a series of numbers
+gen(?Cur, ?Top, ?Cur) :- =<(?Cur, ?Top).
+gen(?Cur, ?Top, ?Next):- =<(?Cur, ?Top), is(?Cur1, +(?Cur, 1)), gen(?Cur1, ?Top, ?Next).
+
+% hLine and vLine create a set of tiles in a line vertically or horizontally
+hLineTile(?X1,?X2,?Y,tile(?S,?T)) :- gen(?X1,?X2,?S), tile(?S,?Y), is(?T,?Y).
+vLineTile(?X,?Y1,?Y2,tile(?S,?T)) :- gen(?Y1,?Y2,?T), tile(?X,?T), is(?S,?X).
+
+% Square generates a square by using the trick that Prolog unifies with ALL rules, so it will get all 4 rules, each representing an edge of the square
+square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?Y1, -(?Y, ?R)), is(?X1,-(?X,?R)),is(?X2, +(?X,?R)), hLineTile(?X1, ?X2, ?Y1, tile(?S,?T)).
+square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?Y1, +(?Y, ?R)), is(?X1,-(?X,?R)),is(?X2, +(?X,?R)), hLineTile(?X1, ?X2, ?Y1, tile(?S,?T)).
+square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?X1, -(?X,?R)), is(?Y1,-(?Y,-(?R,1))), is(?Y2, +(?Y, -(?R,1))), vLineTile(?X1, ?Y1, ?Y2, tile(?S,?T)).
+square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?X1, +(?X,?R)), is(?Y1,-(?Y,-(?R,1))), is(?Y2, +(?Y, -(?R,1))), vLineTile(?X1, ?Y1, ?Y2, tile(?S,?T)).
+
+filledSquare(?Min,?Max,tile(?X,?Y),tile(?S,?T)) :- =<(?Min, ?Max), square(tile(?X,?Y),?Min,tile(?S,?T)).
+filledSquare(?Min,?Max,tile(?X,?Y),tile(?S,?T)) :- =<(?Min, ?Max), is(?Min1, +(?Min, 1)), filledSquare(?Min1,?Max,tile(?X,?Y),tile(?S,?T)).

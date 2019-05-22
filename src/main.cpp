@@ -119,6 +119,7 @@ bool cmdHelp(const string &which)
         fprintf(stdout, "\r\n"
                 "Type a Prolog query (preceeding variables with '?') \r\n"
                 "Process an HTN goal using 'goal(...terms...)'\r\n"
+                "Process and HTN goal *and apply any state changes to your environment* 'apply(...terms...)'\r\n"
                 "/? for all commands help\r\n"
                 "/q to end.\r\n"
                 );
@@ -145,6 +146,19 @@ bool cmdPrologQuery(const string &input)
         {
             shared_ptr<HtnPlanner::SolutionsType> solutions = planner->FindAllPlans(factory.get(), state, queryCompiler->result()[0]->arguments());
             fprintf(stdout, ">> %s\r\n\r\n", HtnPlanner::ToStringSolutions(solutions).c_str());
+        }
+        else if(queryCompiler->result().size() == 1 && queryCompiler->result()[0]->name() == "apply")
+        {
+            shared_ptr<HtnPlanner::SolutionsType> solutions = planner->FindAllPlans(factory.get(), state, queryCompiler->result()[0]->arguments());
+            if(solutions == nullptr)
+            {
+                fprintf(stdout, ">> No Solutions\r\n\r\n");
+            }
+            else
+            {
+                state = (*solutions)[0]->finalState();
+                fprintf(stdout, ">> %s\r\n\r\n", HtnPlanner::ToStringSolution((*solutions)[0]).c_str());
+            }
         }
         else
         {
@@ -267,6 +281,9 @@ int ProcessUserInput()
 
 int main (int argc, char *argv[])
 {
+    // Turn off all tracing
+    SetTraceFilter(SystemTraceType::None, TraceDetail::Normal);
+
 	if(argc == 1)
 	{
         cmdHelp("/?c");

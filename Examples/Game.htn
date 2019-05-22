@@ -1,3 +1,16 @@
+/* 
+ A simple tile-based game akin to Chess that has a simple set of rules:
+
+ The game “map” consists of tiles all connected in a square
+ The game consists of units, a tile can only hold one unit
+ If you move into a square already occupied by an opponent you take that piece off the board
+ One unit is a King, if you take the opponent’s King you win.
+ The rest of the units are pawns that can move one square at a time
+ You each start on opposite ends of the map with 3 pawns and a king
+
+ look at the gettingstarted.md for how to use and descriptions of the code 
+*/
+
 % Layout of the map that never needs to change
 tile(0,0).tile(1,0).tile(2,0).tile(3,0).tile(4,0).
 tile(0,1).tile(1,1).tile(2,1).tile(3,1).tile(4,1).
@@ -6,24 +19,79 @@ tile(0,3).tile(1,3).tile(2,3).tile(3,3).tile(4,3).
 tile(0,4).tile(1,4).tile(2,4).tile(3,4).tile(4,4).
 
 % Position of units which will change each turn
-unit(King2-4, King, Player1). at(King2-4, tile(2, 4)).
-%unit(Pawn1-4, Pawn, Player1). at(Pawn1-4, tile(1, 4)).
-%unit(Pawn3-4, Pawn, Player1). at(Pawn3-4, tile(3, 4)).
-%unit(Pawn2-3, Pawn, Player1). at(Pawn2-3, tile(2, 3)).
+unit(King1-1, King, Player1). at(King1-1, tile(2, 4)).
+unit(Pawn1-1, Pawn, Player1). at(Pawn1-1, tile(2, 3)).
+unit(Pawn1-2, Pawn, Player1). at(Pawn1-2, tile(1, 4)).
+unit(Pawn1-3, Pawn, Player1). at(Pawn1-3, tile(3, 4)).
 
-%unit(Pawn2-1, Pawn, Player1). at(Pawn2-1, tile(2, 1)).
-unit(King2-0, King, Player2). at(King2-0, tile(2, 0)).
-%unit(Pawn2-2, Pawn, Player2). at(Pawn2-2, tile(2, 2)).
-unit(Pawn4-3, Pawn, Player2). at(Pawn4-3, tile(4, 3)).
+unit(King2-1, King, Player2). at(King2-1, tile(2, 0)).
+unit(Pawn2-1, Pawn, Player2). at(Pawn2-1, tile(2, 1)).
+unit(Pawn2-2, Pawn, Player2). at(Pawn2-2, tile(1, 0)).
+unit(Pawn2-3, Pawn, Player2). at(Pawn2-3, tile(3, 0)).
+
 
 %%%
-%%% Methods
+%%% Helpers that let you play the game interactively
+%%%
+
+%
+% Print the current board
+b :-
+	tile(?X, ?Y),
+	printTile(tile(?X, ?Y)),
+	printEndRow(?X).
+
+printEndRow(?X) :- <(?X, 4), !.
+printEndRow(?X) :- nl.
+
+printTile(?Tile) :-
+	at(?Unit, ?Tile),
+	write(?Unit), write("   "), !.
+printTile(?Tile) :-
+	write(?Tile), write(" ").
+
+
+%%%
+%%% HTN Methods
 %%%
 
 % Perform the top level AI in order of priority using 'else'
 % so that only one thing happens
+
+% If someone is near our King, attack them.
 doAI(?Player) :- if(), do(attackKingAttackers(?Player)).
+% If we are next to the opponent king, attack it.
+doAI(?Player) :- if(), do(attackKing(?Player)).
+% If there are no pawns near our king, move one back to guard it
 doAI(?Player) :- else, if(), do(defendKing(?Player)).
+% If we next to an opponent's unit, attack it.
+doAI(?Player) :- else, if(), do(attackOpponentUnit(?Player)).
+% Otherwise, go towards the king
+doAI(?Player) :- else, if(), do(moveTowardsOpponentKing(?Player)).
+
+attackKing(?Player) :-
+	if(
+		% Get opponent king
+		opponent(?Player, ?Enemy),
+		unit(?King, King, ?Enemy)
+	),
+	do(attackUnit(?King)).
+
+attackOpponentUnit(?Player) :-
+	if(
+		%Go through each enemy unit
+		opponent(?Player, ?Enemy),
+		unit(?EnemyUnit, ?Type, ?Enemy)		
+	),
+	do(attackUnit(?EnemyUnit)).
+
+moveTowardsOpponentKing(?Player) :-
+	if(
+		% Get opponent king
+		opponent(?Player, ?Enemy),
+		unit(?King, King, ?Enemy)
+	),
+	do(moveClosestPawnNearKing(?Player, ?King)).
 
 attackKingAttackers(?Player) :-
 	if(
@@ -31,8 +99,8 @@ attackKingAttackers(?Player) :-
 		unit(?King, King, ?Player),
 		% Get all Units around it
 		unitsInRange(?King, 1, ?Unit),
-		% that are enemy pawns
-		unit(?Unit, Pawn, ?UnitPlayer),
+		% that are from the enemy
+		unit(?Unit, ?Type, ?UnitPlayer),
 		\\==(?UnitPlayer, ?Player)
 	),
 	do(attackUnit(?Unit)).
@@ -101,10 +169,27 @@ tryMove(?Unit, ?Destination) :-
 			==(?BlockingPlayer, ?UnitPlayer)
 		)
 	),
+	do(doMoveOrCapture(?Unit, ?Destination)).
+
+% Implementation detail of tryMove, should not be called directly 
+% since it hasn't been checked for validity
+% Capture AND move if there is an enemy there
+doMoveOrCapture(?Unit, ?Destination) :-
+	if(
+		at(?OtherUnit, ?Destination),
+		at(?Unit, ?Current)
+	),
+	do(captureUnit(?OtherUnit, ?Destination), doMove(?Unit, ?Current, ?Destination)).
+% otherwise just move
+doMoveOrCapture(?Unit, ?Destination) :- 
+	else,
+	if(
+		at(?Unit, ?Current)
+	),
 	do(doMove(?Unit, ?Current, ?Destination)).
 
 %%%
-%%% Operators
+%%% HTN Operators
 %%%
 
 % Operator that removes a piece from the map
@@ -116,8 +201,11 @@ doMove(?Unit, ?Current, ?Destination) :-
 	del(at(?Unit, ?Current)), add(at(?Unit, ?Destination)).
 
 %%%
-%%% Axioms
+%%% HTN Axioms (just Prolog rules)
 %%%
+
+opponent(?Friend, ?Enemy) :- ==(?Friend, Player1), =(?Enemy, Player2), !.
+opponent(?Friend, ?Enemy) :- ==(?Friend, Player2), =(?Enemy, Player1), !.
 
 % Next tile on the path from X to Y is surely the tile around X that is 
 % closest to Y
@@ -179,11 +267,24 @@ gen(?Cur, ?Top, ?Next):- =<(?Cur, ?Top), is(?Cur1, +(?Cur, 1)), gen(?Cur1, ?Top,
 hLineTile(?X1,?X2,?Y,tile(?S,?T)) :- gen(?X1,?X2,?S), tile(?S,?Y), is(?T,?Y).
 vLineTile(?X,?Y1,?Y2,tile(?S,?T)) :- gen(?Y1,?Y2,?T), tile(?X,?T), is(?S,?X).
 
-% Square generates a square by using the trick that Prolog unifies with ALL rules, so it will get all 4 rules, each representing an edge of the square
-square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?Y1, -(?Y, ?R)), is(?X1,-(?X,?R)),is(?X2, +(?X,?R)), hLineTile(?X1, ?X2, ?Y1, tile(?S,?T)).
-square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?Y1, +(?Y, ?R)), is(?X1,-(?X,?R)),is(?X2, +(?X,?R)), hLineTile(?X1, ?X2, ?Y1, tile(?S,?T)).
-square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?X1, -(?X,?R)), is(?Y1,-(?Y,-(?R,1))), is(?Y2, +(?Y, -(?R,1))), vLineTile(?X1, ?Y1, ?Y2, tile(?S,?T)).
-square(tile(?X,?Y),?R,tile(?S,?T)) :- is(?X1, +(?X,?R)), is(?Y1,-(?Y,-(?R,1))), is(?Y2, +(?Y, -(?R,1))), vLineTile(?X1, ?Y1, ?Y2, tile(?S,?T)).
+% Square generates a square by using the trick that Prolog 
+% unifies with ALL rules, so it will get all 4 rules, each representing 
+% an edge of the square
+square(tile(?X,?Y),?R,tile(?S,?T)) :- 
+	is(?Y1, -(?Y, ?R)), is(?X1,-(?X,?R)),is(?X2, +(?X,?R)), 
+	hLineTile(?X1, ?X2, ?Y1, tile(?S,?T)).
+square(tile(?X,?Y),?R,tile(?S,?T)) :- 
+	is(?Y1, +(?Y, ?R)), is(?X1,-(?X,?R)),is(?X2, +(?X,?R)), 
+	hLineTile(?X1, ?X2, ?Y1, tile(?S,?T)).
+square(tile(?X,?Y),?R,tile(?S,?T)) :- 
+	is(?X1, -(?X,?R)), is(?Y1,-(?Y,-(?R,1))), is(?Y2, +(?Y, -(?R,1))), 
+	vLineTile(?X1, ?Y1, ?Y2, tile(?S,?T)).
+square(tile(?X,?Y),?R,tile(?S,?T)) :- 
+	is(?X1, +(?X,?R)), is(?Y1,-(?Y,-(?R,1))), is(?Y2, +(?Y, -(?R,1))), 
+	vLineTile(?X1, ?Y1, ?Y2, tile(?S,?T)).
 
-filledSquare(?Min,?Max,tile(?X,?Y),tile(?S,?T)) :- =<(?Min, ?Max), square(tile(?X,?Y),?Min,tile(?S,?T)).
-filledSquare(?Min,?Max,tile(?X,?Y),tile(?S,?T)) :- =<(?Min, ?Max), is(?Min1, +(?Min, 1)), filledSquare(?Min1,?Max,tile(?X,?Y),tile(?S,?T)).
+filledSquare(?Min,?Max,tile(?X,?Y),tile(?S,?T)) :- 
+	=<(?Min, ?Max), square(tile(?X,?Y),?Min,tile(?S,?T)).
+filledSquare(?Min,?Max,tile(?X,?Y),tile(?S,?T)) :- 
+	=<(?Min, ?Max), is(?Min1, +(?Min, 1)), 
+	filledSquare(?Min1,?Max,tile(?X,?Y),tile(?S,?T)).

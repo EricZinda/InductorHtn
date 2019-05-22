@@ -2,6 +2,9 @@
 # Getting Started
 Read readme.md for background on the engine and how to build it, this document describes how to use it if you think it is right for you.
 
+## Performance
+Note that the performance of this project is *HUGELY* dependent on whether you have built for retail or debug.  Debug builds have error checking which does *major* damage to performance.  Make sure you run in retail if you are evaluating the performance!
+
 ## Background Reading
 - For an overview of what an HTN is read: https://www.exospecies.com/blog/htnoverview
 - For an overview of the Prolog engine used inside the Inductor HTN Engine read: https://www.exospecies.com/blog/prolog

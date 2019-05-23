@@ -52,7 +52,7 @@ Set the default project to runtests and hit F5. You'll get a console window with
 
 ## Getting Started
 
-Read [](GettingStarted.md).
+Read [GettingStarted.md](GettingStarted.md).
 
 License
 ---------

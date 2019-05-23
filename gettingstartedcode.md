@@ -8,9 +8,9 @@ If you just want to learn how the engine works and write rules, start with getti
 If you want to learn how to embed the Inductor HTN engine into your project or call it from C++, you're in the right place.
 
 ## Calling Inductor HTN from C++
-Start by reading [Inductor Prolog Getting Started](https://blog.inductorsoftware.com/InductorProlog/gettingstarted.html) to get an overview of the how to load files, the main classes that are used, etc for Prolog and then continue below.  
+The C++ interface to InductorHTN is simply a set of additional classes used in addition to the InductorProlog engine. So, start by reading [Inductor Prolog Getting Started](https://blog.inductorsoftware.com/InductorProlog/gettingstarted.html) to get an overview of the how to load files, the main classes that are used, etc for Prolog and then continue below.  
 
-The C++ interface to InductorHTN is simply a set of additional classes used in addition to the InductorProlog engine.  The rest of this document outlines the additional classes added by Inductor HTN to make Hierarchical Task Networks work.
+The rest of this document outlines the additional classes added by Inductor HTN to make Hierarchical Task Networks work.
 
 
 ### Loading and Compiling HTN Strings and Files

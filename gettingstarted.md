@@ -6,16 +6,16 @@ Read readme.md for background on the engine and how to build it, this document d
 - What an HTN is: [HTN Overview](https://blog.inductorsoftware.com/blog/htnoverview)
 - The Prolog engine used inside the Inductor HTN Engine: [Inductor Prolog Overview](https://blog.inductorsoftware.com/blog/prolog)
 - How to use the Inductor HTN Language: [Inductor HTN Overview](https://blog.inductorsoftware.com/blog/InductorHtnOverview)
-- Example of using an HTN for a strategy game [Inductor HTN Example](https://blog.inductorsoftware.com/blog/inductorhtnexample)
+- Example of using an HTN for a strategy game: [Inductor HTN Example](https://blog.inductorsoftware.com/blog/inductorhtnexample)
 - For a lot of background on how this HTN Engine was used in production in a strategy game, start at the first blog entry on [Exospecies Blog](https://blog.inductorsoftware.com/blog/schmingularity) and read through to the bitter end.
 
 ## Optimal Problems for HTNs
 
 Hierarchical Task Networks are a proven model for solving many AI Planning problems and they've been around for a long time. I've found that they are a good solution if you need an engine that can create a plan in a complex problem space where doing an exhaustive search (or an approximation of it) to solve the problem simply isn't an option AND where you have an expert that knows the right answer (or a good enough answer) because they're going to have to code up the rules.  Your HTN will only do its job as well as the best person you have writing the rules.
 
-One example where I think HTN's *shouldn't* be used: Two-person zero-sum games with perfect information (Chess, Checkers, etc.), I suspect that some variant of the [minimax algorithm](https://en.wikipedia.org/wiki/Minimax) is going to be your best bet.  This does an exhaustive search, or close enough for many purposes.
+One example where I think HTN's *shouldn't* be used: Two-person zero-sum games with perfect information (Chess, Checkers, etc.), I suspect that some variant of the [minimax algorithm](https://en.wikipedia.org/wiki/Minimax) is going to be your best bet.  This does an exhaustive search or close enough for many purposes.
 
-HTN's were a great solution for [Exospecies](www.exospecies.com) because it is a complex game with resource management and the high cost of calculating a turn makes running lots of scenarios (like minimax) impossible.  An approach that used rules written by an expert was the best I was going to do. That's what the Inductor HTN Engine was originally built for and where it was first used in production.  It uses Prolog as a primary part of its language and the [Inductor Prolog Engine](https://github.com/EricZinda/InductorProlog) as part of its runtime engine.
+HTN's were a great solution for [Exospecies](www.exospecies.com) because it is a complex game with resource management and the high cost of calculating a turn makes running lots of scenarios (like minimax does) impossible.  An approach that used rules written by an expert was the best I was going to do. That's what the Inductor HTN Engine was originally built for and where it was first used in production.  It uses Prolog as a primary part of its language and the [Inductor Prolog Engine](https://github.com/EricZinda/InductorProlog) as part of its runtime engine.
 
 ## Performance
 Note that the performance of this project is *HUGELY* dependent on whether you have built for retail or debug.  Debug builds have error checking which does *major* damage to performance.  Make sure you run in retail if you are evaluating the performance!
@@ -36,7 +36,7 @@ The easiest way to use interactive mode is to create a single file with a `.htn`
 The [Inductor HTN Example](https://blog.inductorsoftware.com/blog/inductorhtnexample) shows how to use it in detail.
 
 ## Calling Inductor HTN from C++
-The C++ interface to InductorHTN is simply a set of classes used in addition to the InductorProlog engine. So, start by reading [Inductor Prolog Getting Started](https://blog.inductorsoftware.com/InductorProlog/gettingstarted.html) to get an overview of the how to load files, the main classes that are used, etc for Prolog and then continue below.  
+The C++ interface to InductorHTN is simply a set of classes used in addition to the [Inductor Prolog Engine](https://github.com/EricZinda/InductorProlog). So, start by reading [Inductor Prolog Getting Started](https://blog.inductorsoftware.com/InductorProlog/gettingstarted.html) to get an overview of the how to load files, the main classes that are used, etc for Prolog and then continue below.  
 
 The rest of this document outlines the additional classes added by Inductor HTN to make Hierarchical Task Networks work.
 
@@ -48,7 +48,7 @@ If you want to load a set of HTN rules, it works exactly like [Inductor Prolog](
 ~~~
 // InductorHtn uses the same factory model (and classes) as InductorProlog
 // for creating terms so it can "intern" them to save memory.  
-// You must never mix terms from different HtnTermFactorys
+// You must never mix terms from different HtnTermFactory's
 shared_ptr<HtnTermFactory> factory = 
     shared_ptr<HtnTermFactory>(new HtnTermFactory());
 
@@ -88,16 +88,19 @@ if(!compiler->Compile(
 }
 ~~~
 
-If compilation is successful, the compiler will have filled the HtnRuleSet with any Facts and Axioms, and the HtnPlanner with Methods and Operators.
+If compilation is successful, the compiler will have filled the `HtnRuleSet` with any Facts and Axioms, and the `HtnPlanner` with Methods and Operators.
 
-### Creating HTN Methods and Operators by hand
-If you don't want to compile an HTN file, you can easily create Methods and Operators by hand.  The same is true for Facts and Axioms (aka Prolog Rules), and this is shown in the [Inductor Prolog Getting Started](https://github.com/EricZinda/InductorProlog/blob/master/gettingstarted.md).  In fact, most of the code is the same:
+### Creating HTN Methods and Operators by Hand
+If you don't want to compile an HTN file, you can easily create Methods and Operators by hand (ditto for Faccts and Axioms (aka Prolog Rules), see [Inductor Prolog Getting Started](https://github.com/EricZinda/InductorProlog/blob/master/gettingstarted.md). In fact, most of the code is the same):
 ~~~
 // Create the method: travel-to(?q) :- 
 //      if(at(?p), walking-distance(?p, ?q)),
 //      do(walk(?p, ?q))."
 shared_ptr<HtnTerm> head = 
-    factory->CreateFunctor("travel-to", { factory->CreateVariable("q") });
+    factory->CreateFunctor("travel-to", 
+    	{ 
+    		factory->CreateVariable("q") 
+    	});
 
 vector<std::shared_ptr<HtnTerm>> condition = 
     {   

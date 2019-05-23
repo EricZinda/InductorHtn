@@ -6,10 +6,10 @@ Read readme.md for background on the engine and how to build it, this document d
 Note that the performance of this project is *HUGELY* dependent on whether you have built for retail or debug.  Debug builds have error checking which does *major* damage to performance.  Make sure you run in retail if you are evaluating the performance!
 
 ## Background Reading
-- For an overview of what an HTN is read: https://www.exospecies.com/blog/htnoverview
-- For an overview of the Prolog engine used inside the Inductor HTN Engine read: https://www.exospecies.com/blog/prolog
+- For an overview of what an HTN is read: [https://blog.inductorsoftware.com/blog/htnoverview](https://blog.inductorsoftware.com/htnoverview)
+- For an overview of the Prolog engine used inside the Inductor HTN Engine read: [https://blog.inductorsoftware.com/blog/prolog](https://blog.inductorsoftware.com/prolog)
 - For an overview of how to use the HTN Language for the Inductor HTN Engine read: [Not posted yet]
-- For a lot of background on how this HTN Engine was used in production in a strategy game, start at the first blog entry on https://www.exospecies.com/blog and read through to the bitter end.
+- For a lot of background on how this HTN Engine was used in production in a strategy game, start at the first blog entry on [https://blog.inductorsoftware.com/blog/schmingularity](https://blog.inductorsoftware.com/blog/schmingularity) and read through to the bitter end.
 
 ## Optimal Problems for HTNs
 

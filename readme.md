@@ -1,6 +1,6 @@
 Inductor Hierarchical Task Network Engine
 =========================================
-This lightweight [Hierarchical Task Network](https://en.wikipedia.org/wiki/Hierarchical_task_network) engine was first used in production in an iPhone strategy game called [Exospecies](https://www.exospecies.com). Visit the [Exospecies Blog](https://www.exospecies.com/blog) for more details.  It is designed to be small, memory constrained, and used as an implementation detail of an app. It used the classic [SHOP Planner](http://www.cs.umd.edu/projects/shop/description.html) as inspiration and largely followed that model.
+This lightweight [Hierarchical Task Network](https://en.wikipedia.org/wiki/Hierarchical_task_network) engine was first used in production in an iPhone strategy game called [Exospecies](https://www.exospecies.com). Visit the [Exospecies Blog](https://blog.inductorsoftware.com) for more details.  It is designed to be small, memory constrained, and used as an implementation detail of an app. It used the classic [SHOP Planner](http://www.cs.umd.edu/projects/shop/description.html) as inspiration and largely followed that model.
 
 Use and enjoy!
 

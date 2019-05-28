@@ -7,6 +7,6 @@
 //
 
 #include <stdio.h>
-#include "FXPlatform/Htn/HtnGoalResolver.h"
+#include "FXPlatform/Prolog/HtnGoalResolver.h"
 
 string DiffSolutionInOrder(shared_ptr<HtnTermFactory> factory, const string &expected, shared_ptr<vector<UnifierType>> solution);

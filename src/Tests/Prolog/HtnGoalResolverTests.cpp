@@ -1374,7 +1374,7 @@ SUITE(HtnGoalResolverTests)
         // ***** single \==() goal that fails
         compiler->Clear();
         testState = string() +
-        "goals(\\\\==(letter(a), letter(a))).\r\n";
+        "goals(\\==(letter(a), letter(a))).\r\n";
         CHECK(compiler->Compile(testState));
         unifier = compiler->SolveGoals();
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
@@ -1383,7 +1383,7 @@ SUITE(HtnGoalResolverTests)
         // ***** single \==() goal that succeeds
         compiler->Clear();
         testState = string() +
-        "goals(\\\\==(letter(a), letter(b))).\r\n";
+        "goals(\\==(letter(a), letter(b))).\r\n";
         CHECK(compiler->Compile(testState));
         unifier = compiler->SolveGoals();
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
@@ -1396,7 +1396,7 @@ SUITE(HtnGoalResolverTests)
         "capital(B). capital(A).\r\n" +
         "combo(A, ComboA). combo(B, ComboB).\r\n"
         "trace(?x) :- .\r\n"
-        "goals(capital(?Capital), \\\\==(letter(?Capital), letter(B)), combo(?Capital, ?Combo)).\r\n";
+        "goals(capital(?Capital), \\==(letter(?Capital), letter(B)), combo(?Capital, ?Combo)).\r\n";
         CHECK(compiler->Compile(testState));
         unifier = compiler->SolveGoals();
         finalUnifier = HtnGoalResolver::ToString(unifier.get());

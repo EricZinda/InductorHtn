@@ -25,11 +25,11 @@ public:
     class SubstitutionRule : public
     AndExpression<Args
     <
-        PrologVariable,
+        PrologVariable<HtnVariable>,
         PrologOptionalWhitespace,
         CharacterSymbol<EqualString>,
         PrologOptionalWhitespace,
-        PrologTerm
+        PrologTerm<HtnVariable>
     >, FlattenType::None, SolutionSymbolID::SolutionSubstitution>
     {
     };

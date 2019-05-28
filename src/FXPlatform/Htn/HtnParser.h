@@ -9,7 +9,7 @@
 #ifndef HtnLanguageParser_hpp
 #define HtnLanguageParser_hpp
 
-#include "Parser/Parser.h"
+#include "FXPlatform/Parser/Parser.h"
 using namespace FXPlat;
 namespace Htn
 {

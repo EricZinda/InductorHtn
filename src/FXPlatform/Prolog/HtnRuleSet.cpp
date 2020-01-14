@@ -6,6 +6,8 @@
 //  Copyright © 2019 Eric Zinda. All rights reserved.
 //
 #include "FXPlatform/FailFast.h"
+#include "FXPlatform/NanoTrace.h"
+#include "FXPlatform/SystemTraceType.h"
 #include "HtnRuleSet.h"
 #include "HtnTerm.h"
 using namespace std;
@@ -15,11 +17,27 @@ void HtnRuleSet::HtnSharedRules::AddRule(shared_ptr<HtnTerm> head, vector<shared
     FailFastAssert(!m_isLocked);
     FailFastAssert(head->name().size() > 0);
     HtnTerm::HtnTermID headID = head->GetUniqueID();
-
+    
     // Ground facts must be unique
     if(tail.size() == 0 && head->isGround())
     {
-        FailFastAssert(m_ruleHeads.find(headID) == m_ruleHeads.end());
+        auto found = m_ruleHeads.find(headID);
+        if(found != m_ruleHeads.end())
+        {
+            // Make sure we actually have the rule and it isn't some artifact of
+            // how we are tracking the rules
+            for(auto item : m_rules)
+            {
+                if(item.head()->ToString() == head->ToString())
+                {
+                    TraceString1("HtnRuleSet::HtnSharedRules::AddRule duplicate rule '{0}'",
+                                 SystemTraceType::Solver, TraceDetail::Normal,
+                                 item.head()->ToString());
+                }
+            }
+            
+            FailFastAssert(false);
+        }
     }
 
     HtnRule newRule(head, tail);
@@ -119,6 +137,23 @@ bool HtnRuleSet::DebugHasRule(const string &head, const string &tail) const
           return true;
       });
           
+    return found;
+}
+
+bool HtnRuleSet::HasEquivalentRule(std::shared_ptr<HtnTerm> term) const
+{
+    bool found = false;
+    AllRules([&](const HtnRule &rule)
+      {
+          if(rule.head()->isEquivalentCompoundTerm(term))
+          {
+              found = true;
+              return false;
+          }
+          
+          return true;
+      });
+
     return found;
 }
 

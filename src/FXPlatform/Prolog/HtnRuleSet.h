@@ -66,6 +66,8 @@ public:
     std::shared_ptr<HtnRuleSet> CreateCopy();
     int64_t dynamicSize() { return m_dynamicSize; };
     int64_t dynamicSharedSize() { return m_sharedRules->dynamicSize(); };
+    // Equivalent means same name and number of arguments
+    bool HasEquivalentRule(std::shared_ptr<HtnTerm> term) const;
     bool HasFact(std::shared_ptr<HtnTerm> term) const;
     // Very inefficient, but useful for tests
     bool DebugHasRule(const std::string &head, const std::string &tail) const;

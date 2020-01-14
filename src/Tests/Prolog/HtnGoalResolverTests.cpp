@@ -361,7 +361,7 @@ SUITE(HtnGoalResolverTests)
         CHECK(factory->CreateVariable("foo")->GetTermType() == HtnTermType::Variable);
         CHECK(factory->CreateConstantFunctor("foo", { "bar" })->GetTermType() == HtnTermType::Compound);
         
-        shared_ptr<HtnTerm>result = factory->CreateFunctor(">",
+        shared_ptr<HtnTerm> result = factory->CreateFunctor(">",
         {
             factory->CreateConstant("1"),
             factory->CreateConstant("2")
@@ -382,6 +382,45 @@ SUITE(HtnGoalResolverTests)
                                                  });
         CHECK(*result->Eval(factory.get()) == *trueTerm);
 
+        result = factory->CreateFunctor(">=",
+                                        {
+                                            factory->CreateConstant("-17"),
+                                            factory->CreateConstant("0")
+                                        });
+        CHECK(*result->Eval(factory.get()) == *falseTerm);
+
+        // Make sure conversions work
+        shared_ptr<HtnTerm> result2;
+        // float
+        result = factory->CreateConstantFunctor("float", { "1.1" } );
+        result2 = result->Eval(factory.get());
+        CHECK(*result2 == *factory->CreateConstant("1.100000000"));
+
+        result = factory->CreateConstantFunctor("float", { "-1.1" } );
+        result2 = result->Eval(factory.get());
+        CHECK(*result2 == *factory->CreateConstant("-1.100000000"));
+
+        // integer
+        result = factory->CreateConstantFunctor("integer", { "1.1" } );
+        result2 = result->Eval(factory.get());
+        CHECK(*result2 == *factory->CreateConstant("1"));
+
+        result = factory->CreateConstantFunctor("integer", { "-1.1" } );
+        result2 = result->Eval(factory.get());
+        CHECK(*result2 == *factory->CreateConstant("-1"));
+
+        // abs
+        result = factory->CreateConstantFunctor("abs", { "1.1" } );
+        result2 = result->Eval(factory.get());
+        CHECK(*result2 == *factory->CreateConstant("1.100000000"));
+        result = factory->CreateConstantFunctor("abs", { "-1.1" } );
+        result2 = result->Eval(factory.get());
+        CHECK(*result2 == *factory->CreateConstant("1.100000000"));
+        
+        // basic math
+        result = factory->CreateFunctor("-", { factory->CreateConstant("-3"), factory->CreateConstant("13")  });
+        result2 = result->Eval(factory.get());
+        CHECK(*result2 == *factory->CreateConstant("-16"));
     }
 
     TEST(HtnGoalResolverUnifierOperatorTests)
@@ -547,6 +586,18 @@ SUITE(HtnGoalResolverTests)
 		shared_ptr<vector<UnifierType>> unifier;
 
 //        SetTraceFilter((int)SystemTraceType::Solver, TraceDetail::Diagnostic);
+        // ***** Make sure the same variables in terms of a conjunction get mapped to the same renamed variables
+        compiler->Clear();
+        testState = string() +
+        "name(Name1). \r\n" +
+        "name(Name4). \r\n" +
+        "itemsInBag(Name1, Name1). \r\n" +
+        "itemsInBag(Name2, Name3). \r\n" +
+        "goals( itemsInBag(?X, ?X), name(?X) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = Name1))");
 
 		// ***** Make sure the same variables get mapped to the same renamed variables 
 		compiler->Clear();

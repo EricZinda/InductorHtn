@@ -23,19 +23,46 @@ typedef std::pair<std::shared_ptr<HtnTerm>, std::shared_ptr<HtnTerm>> UnifierIte
 typedef std::vector<UnifierItemType> UnifierType;
 typedef std::pair<std::shared_ptr<HtnRule>, UnifierType> RuleBindingType;
 
+enum class CustomRuleArgType
+{
+    Unknown = 0,
+    
+    // These are the Base Types that an argument can be
+    // Required to be arithmetic
+    Arithmetic,
+    // Is a variable
+    Variable,
+    // Is a term that should be solved
+    ResolvedTerm,
+    // Is not solved (but *may* be unified)
+    Term,
+    // Is a term like <=() that will be handled in a special way,
+    // The SolvedTerms inside should be handled as CustomRuleArgType::SolvedTerms
+    TermOfResolvedTerms,
+
+    // All of these are variadic arguments that describe "all the rest" of
+    // the arguments and must be last:
+    // All the rest are terms that should be solved
+    SetOfResolvedTerms,
+    // Set of terms that are not solved (but *may* be unified)
+    SetOfTerms
+};
+
 // Performs Prolog-style resolution of a set of terms against a database of rules as well as unification 
-class HtnGoalResolver
+class HtnGoalResolver : public std::enable_shared_from_this<HtnGoalResolver>
 {
 public:
-    typedef std::function<void(ResolveState *)> CustomRuleType;
+    typedef std::pair<std::vector<CustomRuleArgType>, std::function<void(ResolveState *)>> CustomRuleType;
 
     HtnGoalResolver();
     void AddCustomRule(const std::string &name, CustomRuleType);
     static std::shared_ptr<HtnTerm> ApplyUnifierToTerm(HtnTermFactory *termFactory, UnifierType unifier, std::shared_ptr<HtnTerm>term);
+    // Converts an argument into one of the base CustomRuleArgTypes
+    static CustomRuleArgType GetCustomRuleArgBaseType(std::vector<CustomRuleArgType> metadata, int argIndex);
     static std::shared_ptr<std::vector<RuleBindingType>> FindAllRulesThatUnify(HtnTermFactory *termFactory, HtnRuleSet *prog, std::shared_ptr<HtnTerm> goal, int *uniquifier, int indentLevel, int memoryBudget, bool fullTrace, int64_t *highestMemoryUsedReturn);
     static std::shared_ptr<HtnTerm> FindTermEquivalence(const UnifierType &unifier, const HtnTerm &termToFind);
     static bool IsGround(UnifierType *unifier);
-    bool HasCustomRule(const std::string &name);
+    bool GetCustomRule(const std::string &name, int arity, HtnGoalResolver::CustomRuleType &metadata);
     // Always check factory->outOfMemory() after calling to see if we ran out of memory during processing and the resolutions might not be complete
     std::shared_ptr<std::vector<UnifierType>> ResolveAll(HtnTermFactory *termFactory, HtnRuleSet *prog, const std::vector<std::shared_ptr<HtnTerm>> &initialGoals, int initialIndent = 0, int memoryBudget = 1000000, int64_t *highestMemoryUsedReturn = nullptr);
     // Always check factory->outOfMemory() after calling to see if we ran out of memory during processing and the resolutions might not be complete

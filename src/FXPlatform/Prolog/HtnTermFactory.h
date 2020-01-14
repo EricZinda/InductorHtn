@@ -55,7 +55,9 @@ public:
 private:
     std::map<std::string, std::shared_ptr<HtnCustomData>> m_customData;
     std::shared_ptr<HtnTerm> m_false;
-    static const int MaxIndexTerms = 120;
+    // This can be anything, it represents the max number of terms we support
+    // One array of strings of this size will be created
+    static const int MaxIndexTerms = 256;
 
     struct stringPtrLess
     {

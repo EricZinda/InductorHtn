@@ -153,7 +153,7 @@ shared_ptr<ResolveNode> ResolveNode::CreateChildNode(HtnTermFactory *termFactory
     shared_ptr<UnifierType> childUnifier = HtnGoalResolver::SubstituteUnifiers(termFactory, additionalSubstitution, *unifier);
     childUnifier->insert(childUnifier->end(), additionalSubstitution.begin(), additionalSubstitution.end());
     
-    // Simply the unifiers to not include any that can't possibly be used so we don't waste memory
+    // Simplify the unifiers to not include any that can't possibly be used so we don't waste memory
     shared_ptr<UnifierType> simplifiedUnifier = RemoveUnusedUnifiers(variablesToKeep, *childUnifier, originalGoals, *childResolvent);
     
     // Apply new substitutions to new Resolvent
@@ -423,27 +423,27 @@ shared_ptr<UnifierType> ResolveState::SimplifySolution(const UnifierType &soluti
 
 HtnGoalResolver::HtnGoalResolver()
 {
-	AddCustomRule("assert", std::bind(&HtnGoalResolver::RuleAssert, std::placeholders::_1));
-	AddCustomRule("count", std::bind(&HtnGoalResolver::RuleCount, std::placeholders::_1));
-    AddCustomRule("distinct", std::bind(&HtnGoalResolver::RuleDistinct, std::placeholders::_1));
-    AddCustomRule("first", std::bind(&HtnGoalResolver::RuleFirst, std::placeholders::_1));
-    AddCustomRule("forall", std::bind(&HtnGoalResolver::RuleForAll, std::placeholders::_1));
-    AddCustomRule("is", std::bind(&HtnGoalResolver::RuleIs, std::placeholders::_1));
-    AddCustomRule("max", std::bind(&HtnGoalResolver::RuleAggregate, std::placeholders::_1));
-    AddCustomRule("min", std::bind(&HtnGoalResolver::RuleAggregate, std::placeholders::_1));
-    AddCustomRule("nl", std::bind(&HtnGoalResolver::RuleNewline, std::placeholders::_1));
-    AddCustomRule("not", std::bind(&HtnGoalResolver::RuleNot, std::placeholders::_1));
-    AddCustomRule("print", std::bind(&HtnGoalResolver::RulePrint, std::placeholders::_1));
-    AddCustomRule("sortBy", std::bind(&HtnGoalResolver::RuleSortBy, std::placeholders::_1));
-    AddCustomRule("sum", std::bind(&HtnGoalResolver::RuleAggregate, std::placeholders::_1));
-	AddCustomRule("retract", std::bind(&HtnGoalResolver::RuleRetract, std::placeholders::_1));
-    AddCustomRule("retractall", std::bind(&HtnGoalResolver::RuleRetractAll, std::placeholders::_1));
-    AddCustomRule("showTraces", std::bind(&HtnGoalResolver::RuleTrace, std::placeholders::_1));
-    AddCustomRule("write", std::bind(&HtnGoalResolver::RuleWrite, std::placeholders::_1));
-    AddCustomRule("writeln", std::bind(&HtnGoalResolver::RuleWrite, std::placeholders::_1));
-    AddCustomRule("==", std::bind(&HtnGoalResolver::RuleTermCompare, std::placeholders::_1));
-    AddCustomRule("\\==", std::bind(&HtnGoalResolver::RuleTermCompare, std::placeholders::_1));
-    AddCustomRule("=", std::bind(&HtnGoalResolver::RuleUnify, std::placeholders::_1));
+    AddCustomRule("assert", CustomRuleType({ CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleAssert, std::placeholders::_1)));
+	AddCustomRule("count", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleCount, std::placeholders::_1)));
+    AddCustomRule("distinct", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleDistinct, std::placeholders::_1)));
+    AddCustomRule("first", CustomRuleType({ CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleFirst, std::placeholders::_1)));
+    AddCustomRule("forall", CustomRuleType({ CustomRuleArgType::ResolvedTerm, CustomRuleArgType::ResolvedTerm }, std::bind(&HtnGoalResolver::RuleForAll, std::placeholders::_1)));
+    AddCustomRule("is", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::Arithmetic }, std::bind(&HtnGoalResolver::RuleIs, std::placeholders::_1)));
+    AddCustomRule("max", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleAggregate, std::placeholders::_1)));
+    AddCustomRule("min", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleAggregate, std::placeholders::_1)));
+    AddCustomRule("nl", CustomRuleType({ }, std::bind(&HtnGoalResolver::RuleNewline, std::placeholders::_1)));
+    AddCustomRule("not", CustomRuleType({ CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleNot, std::placeholders::_1)));
+    AddCustomRule("print", CustomRuleType({ CustomRuleArgType::SetOfTerms }, std::bind(&HtnGoalResolver::RulePrint, std::placeholders::_1)));
+    AddCustomRule("sortBy", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::TermOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleSortBy, std::placeholders::_1)));
+    AddCustomRule("sum", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleAggregate, std::placeholders::_1)));
+	AddCustomRule("retract", CustomRuleType({ CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleRetract, std::placeholders::_1)));
+    AddCustomRule("retractall", CustomRuleType({ CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleRetractAll, std::placeholders::_1)));
+    AddCustomRule("showTraces", CustomRuleType({ CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleTrace, std::placeholders::_1)));
+    AddCustomRule("write", CustomRuleType({ CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleWrite, std::placeholders::_1)));
+    AddCustomRule("writeln", CustomRuleType({ CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleWrite, std::placeholders::_1)));
+    AddCustomRule("==", CustomRuleType({ CustomRuleArgType::Term, CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleTermCompare, std::placeholders::_1)));
+    AddCustomRule("\\==", CustomRuleType({ CustomRuleArgType::Term, CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleTermCompare, std::placeholders::_1)));
+    AddCustomRule("=", CustomRuleType({ CustomRuleArgType::Term, CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleUnify, std::placeholders::_1)));
 }
 
 // The trick here is that certain special rules like not, First and SortBy do more than just lookup a rule in a ruleset
@@ -585,9 +585,52 @@ shared_ptr<HtnTerm> HtnGoalResolver::FindTermEquivalence(const UnifierType &unif
     return nullptr;
 }
 
-bool HtnGoalResolver::HasCustomRule(const string &name)
+bool HtnGoalResolver::GetCustomRule(const string &name, int arity, HtnGoalResolver::CustomRuleType &metadata)
 {
-    return m_customRules.find(name) != m_customRules.end();
+    auto found = m_customRules.find(name);
+    if(found != m_customRules.end())
+    {
+        metadata = found->second;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+CustomRuleArgType HtnGoalResolver::GetCustomRuleArgBaseType(std::vector<CustomRuleArgType> metadata, int argIndex)
+{
+    CustomRuleArgType argType = CustomRuleArgType::Unknown;
+    if(argIndex < metadata.size())
+    {
+        argType = metadata[argIndex];
+    }
+    else
+    {
+        // If it is past the end, use the last argument if it is variadic
+        CustomRuleArgType lastArg = *metadata.rbegin();
+        if(lastArg == CustomRuleArgType::SetOfResolvedTerms || lastArg == CustomRuleArgType::SetOfTerms)
+        {
+            argType = lastArg;
+        }
+        else
+        {
+            StaticFailFastAssertDesc(false, "Too many arguments for built-in rule");
+        }
+    }
+    
+    // Convert sets to base types
+    if(argType == CustomRuleArgType::SetOfResolvedTerms)
+    {
+        argType = CustomRuleArgType::ResolvedTerm;
+    }
+    else if(*metadata.rbegin() == CustomRuleArgType::SetOfTerms)
+    {
+        argType = CustomRuleArgType::Term;
+    }
+    
+    return argType;
 }
 
 bool HtnGoalResolver::IsGround(UnifierType *unifier)
@@ -828,7 +871,7 @@ shared_ptr<UnifierType> HtnGoalResolver::ResolveNext(ResolveState *state)
                         {
                             // This is a custom rule that will potentially add to currentNode->rulesThatUnify and be handled just like the default case
                             currentNode->continuePoint = ResolveContinuePoint::CustomStart;
-                            foundCustomRule->second(state);
+                            foundCustomRule->second.second(state);
                         }
                         else
                         {
@@ -890,7 +933,7 @@ shared_ptr<UnifierType> HtnGoalResolver::ResolveNext(ResolveState *state)
             {
                 CustomRulesType::iterator foundCustomRule = m_customRules.find(currentNode->currentGoal()->name());
                 FailFastAssert(foundCustomRule != m_customRules.end());
-                foundCustomRule->second(state);
+                foundCustomRule->second.second(state);
             }
             break;
         }
@@ -900,7 +943,7 @@ shared_ptr<UnifierType> HtnGoalResolver::ResolveNext(ResolveState *state)
     return nullptr;
 }
 
-// agg(?AggregateVariable, ?Variable, terms...)
+// agg(?AggregateVariable, ?Variable, ?SetOfResolvedTerms...)
 // agg will evaluate ALL of the potential resolutions and return the aggreg value of ?Variable, if there are none, it fails
 // The terms must bind ?Variable and bind it to a ground number or it fails
 // No bindings will be passed along except ?AggregateVariable
@@ -1035,6 +1078,7 @@ void HtnGoalResolver::RuleAggregate(ResolveState *state)
     }
 }
 
+// assert(?Term)
 void HtnGoalResolver::RuleAssert(ResolveState* state)
 {
 	shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1105,6 +1149,7 @@ void HtnGoalResolver::RuleAssert(ResolveState* state)
 
 // Count will evaluate ALL of the potential resolutions and then only return the Number of them, if it fails the count is zero and count will NOT fail
 // No bindings will be passed along from Count but it will resolve to the total # of solutions we found
+// count(?Variable, ?SetOfResolvedTerms...)
 void HtnGoalResolver::RuleCount(ResolveState *state)
 {
     shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1164,7 +1209,7 @@ void HtnGoalResolver::RuleCount(ResolveState *state)
     }
 }
 
-// distinct(?Value, ...)
+// distinct(?Variable, ?SetOfResolvedTerms...)
 // where ?Value is a variable symbol, and the rest is a set of terms.
 void HtnGoalResolver::RuleDistinct(ResolveState *state)
 {
@@ -1275,7 +1320,72 @@ void HtnGoalResolver::RuleDistinct(ResolveState *state)
     }
 }
 
-// forall(Condition, Action)
+// first(?SetOfResolvedTerms...)
+void HtnGoalResolver::RuleFirst(ResolveState *state)
+{
+    shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
+    shared_ptr<HtnTerm> goal = currentNode->currentGoal();
+    shared_ptr<vector<UnifierType>> &solutions = state->solutions;
+    shared_ptr<vector<shared_ptr<ResolveNode>>> &resolveStack = state->resolveStack;
+    HtnTermFactory *termFactory = state->termFactory;
+
+    switch(currentNode->continuePoint)
+    {
+        case ResolveContinuePoint::CustomStart:
+        {
+            // First will evaluate ALL of the potential resolutions and then only return the first if it exists instead of following them all through to a solution
+            // Make sure we keep around the value of ?Variable and any variables in the rest of the resolvent (they won't be there when we do the resolve, so they will get stripped out)
+            shared_ptr<ResolveNode::TermSetType> variablesToKeep = shared_ptr<ResolveNode::TermSetType>(new ResolveNode::TermSetType());
+            for(shared_ptr<HtnTerm> term : *currentNode->resolvent())
+            {
+                term->GetAllVariables(variablesToKeep.get());
+            }
+
+            // Run the resolver just on the arguments as if it were a standalone resolution.  Then continue on depending on what happens
+            currentNode->PushStandaloneResolve(state, variablesToKeep, goal->arguments().rbegin(), goal->arguments().rend(), ResolveContinuePoint::CustomContinue1);
+        }
+        break;
+
+        case ResolveContinuePoint::CustomContinue1:
+        {
+            // Solutions now contains just solutions to what was in the first() term
+            if(solutions == nullptr)
+            {
+                // There were no solutions: fail!
+                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                resolveStack->pop_back();
+            }
+            else
+            {
+                // Create a fake "rule" so we can continue the search.
+                shared_ptr<HtnRule> rule = shared_ptr<HtnRule>(new HtnRule(termFactory->CreateConstant("firstResult"), {}));
+                
+                // Add the first solution we found as a "unified rule" so we can loop through it
+                currentNode->rulesThatUnify = shared_ptr<vector<RuleBindingType>>(new vector<RuleBindingType>());
+                currentNode->rulesThatUnify->push_back(RuleBindingType(rule, (*solutions)[0]));
+                
+                // Since the solution we have already has the unifiers from this node included,
+                // get rid of the unifiers for this node so we don't try to remerge each fake unified rule with them again
+                currentNode->unifier = shared_ptr<UnifierType>(new UnifierType());
+                
+                // Put the previous solutions back and continue on as if these were all unified rules
+                Trace0("           ", "first() succeeded with 1 solution", state->initialIndent + resolveStack->size(), state->fullTrace);
+                currentNode->currentRuleIndex = -1;
+                currentNode->continuePoint = ResolveContinuePoint::NextRuleThatUnifies;
+            }
+            
+            currentNode->PopStandaloneResolve(state);
+        }
+        break;
+
+        default:
+            StaticFailFastAssert(false);
+            break;
+    }
+}
+
+// forall(?Condition, ?Action)
+// forall(?ResolvedTerm, ?ResolvedTerm)
 // returns true if there are no failures, otherwise false
 // Written as not(Condition, not(Action), !),  i.e., There is no instantiation of Condition for which Action is false
 // will stop backtracking over all potential solutions when there is a failure
@@ -1344,69 +1454,7 @@ void HtnGoalResolver::RuleForAll(ResolveState *state)
     }
 }
 
-void HtnGoalResolver::RuleFirst(ResolveState *state)
-{
-    shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
-    shared_ptr<HtnTerm> goal = currentNode->currentGoal();
-    shared_ptr<vector<UnifierType>> &solutions = state->solutions;
-    shared_ptr<vector<shared_ptr<ResolveNode>>> &resolveStack = state->resolveStack;
-    HtnTermFactory *termFactory = state->termFactory;
-
-    switch(currentNode->continuePoint)
-    {
-        case ResolveContinuePoint::CustomStart:
-        {
-            // First will evaluate ALL of the potential resolutions and then only return the first if it exists instead of following them all through to a solution
-            // Make sure we keep around the value of ?Variable and any variables in the rest of the resolvent (they won't be there when we do the resolve, so they will get stripped out)
-            shared_ptr<ResolveNode::TermSetType> variablesToKeep = shared_ptr<ResolveNode::TermSetType>(new ResolveNode::TermSetType());
-            for(shared_ptr<HtnTerm> term : *currentNode->resolvent())
-            {
-                term->GetAllVariables(variablesToKeep.get());
-            }
-
-            // Run the resolver just on the arguments as if it were a standalone resolution.  Then continue on depending on what happens
-            currentNode->PushStandaloneResolve(state, variablesToKeep, goal->arguments().rbegin(), goal->arguments().rend(), ResolveContinuePoint::CustomContinue1);
-        }
-        break;
-
-        case ResolveContinuePoint::CustomContinue1:
-        {
-            // Solutions now contains just solutions to what was in the first() term
-            if(solutions == nullptr)
-            {
-                // There were no solutions: fail!
-                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
-                resolveStack->pop_back();
-            }
-            else
-            {
-                // Create a fake "rule" so we can continue the search.
-                shared_ptr<HtnRule> rule = shared_ptr<HtnRule>(new HtnRule(termFactory->CreateConstant("firstResult"), {}));
-                
-                // Add the first solution we found as a "unified rule" so we can loop through it
-                currentNode->rulesThatUnify = shared_ptr<vector<RuleBindingType>>(new vector<RuleBindingType>());
-                currentNode->rulesThatUnify->push_back(RuleBindingType(rule, (*solutions)[0]));
-                
-                // Since the solution we have already has the unifiers from this node included,
-                // get rid of the unifiers for this node so we don't try to remerge each fake unified rule with them again
-                currentNode->unifier = shared_ptr<UnifierType>(new UnifierType());
-                
-                // Put the previous solutions back and continue on as if these were all unified rules
-                Trace0("           ", "first() succeeded with 1 solution", state->initialIndent + resolveStack->size(), state->fullTrace);
-                currentNode->currentRuleIndex = -1;
-                currentNode->continuePoint = ResolveContinuePoint::NextRuleThatUnifies;
-            }
-            
-            currentNode->PopStandaloneResolve(state);
-        }
-        break;
-
-        default:
-            StaticFailFastAssert(false);
-            break;
-    }
-}
-
+// is(?Variable, ?Term)
 void HtnGoalResolver::RuleIs(ResolveState *state)
 {
     shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1456,6 +1504,7 @@ void HtnGoalResolver::RuleIs(ResolveState *state)
     }
 }
 
+// nl()
 void HtnGoalResolver::RuleNewline(ResolveState *state)
 {
     shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1493,6 +1542,7 @@ void HtnGoalResolver::RuleNewline(ResolveState *state)
     }
 }
 
+// not(?SetOfResolvedTerms)
 void HtnGoalResolver::RuleNot(ResolveState *state)
 {
     shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1544,68 +1594,7 @@ void HtnGoalResolver::RuleNot(ResolveState *state)
     }
 }
 
-void HtnGoalResolver::RuleRetractAll(ResolveState* state)
-{
-    shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
-    shared_ptr<HtnTerm> goal = currentNode->currentGoal();
-    shared_ptr<vector<shared_ptr<ResolveNode>>>& resolveStack = state->resolveStack;
-    HtnTermFactory* termFactory = state->termFactory;
-    HtnRuleSet* prog = state->prog;
-    
-    switch (currentNode->continuePoint)
-    {
-        case ResolveContinuePoint::CustomStart:
-        {
-            // the retractAll rule needs a single term
-            if (goal->arguments().size() != 1)
-            {
-                // Invalid program
-                Trace1("ERROR      ", "retractall() must have exactly one term: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                StaticFailFastAssert(false);
-                currentNode->continuePoint = ResolveContinuePoint::ProgramError;
-            }
-            else
-            {
-                shared_ptr<HtnTerm> term = goal->arguments()[0];
-                vector<shared_ptr<HtnTerm>> factsToRemove;
-                prog->AllRules([&](const HtnRule &item)
-                   {
-                       // We only remove facts, so skip rules
-                       // Don't bother if they are not "equivalent" (i.e. the name and term count doesn't match)
-                       // because it can't unify
-                       if(item.IsFact() && (item.head()->isEquivalentCompoundTerm(term)))
-                       {
-                           shared_ptr<UnifierType> sub = HtnGoalResolver::Unify(termFactory, item.head(), term);
-                           
-                           if(sub != nullptr)
-                           {
-                               factsToRemove.push_back(item.head());
-                           }
-                       }
-                       
-                       // Keep going
-                       return true;
-                   });
-                
-                if(factsToRemove.size() > 0)
-                {
-                    prog->Update(termFactory, factsToRemove, {});
-                }
-                
-                // Rule resolves to true so no new terms, no unifiers got added since it it is not unified
-                // Nothing to process on children so no special return handling
-                resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, {}, &(state->uniquifier)));
-                currentNode->continuePoint = ResolveContinuePoint::Return;
-            }
-        }
-        break;
-            
-        default:
-            StaticFailFastAssert(false);
-            break;
-    }
-}
-
+// retract(?Term)
 void HtnGoalResolver::RuleRetract(ResolveState* state)
 {
 	shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1683,6 +1672,70 @@ void HtnGoalResolver::RuleRetract(ResolveState* state)
 	}
 }
 
+// retractall(?Term)
+void HtnGoalResolver::RuleRetractAll(ResolveState* state)
+{
+    shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
+    shared_ptr<HtnTerm> goal = currentNode->currentGoal();
+    shared_ptr<vector<shared_ptr<ResolveNode>>>& resolveStack = state->resolveStack;
+    HtnTermFactory* termFactory = state->termFactory;
+    HtnRuleSet* prog = state->prog;
+    
+    switch (currentNode->continuePoint)
+    {
+        case ResolveContinuePoint::CustomStart:
+        {
+            // the retractAll rule needs a single term
+            if (goal->arguments().size() != 1)
+            {
+                // Invalid program
+                Trace1("ERROR      ", "retractall() must have exactly one term: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
+                StaticFailFastAssert(false);
+                currentNode->continuePoint = ResolveContinuePoint::ProgramError;
+            }
+            else
+            {
+                shared_ptr<HtnTerm> term = goal->arguments()[0];
+                vector<shared_ptr<HtnTerm>> factsToRemove;
+                prog->AllRules([&](const HtnRule &item)
+                   {
+                       // We only remove facts, so skip rules
+                       // Don't bother if they are not "equivalent" (i.e. the name and term count doesn't match)
+                       // because it can't unify
+                       if(item.IsFact() && (item.head()->isEquivalentCompoundTerm(term)))
+                       {
+                           shared_ptr<UnifierType> sub = HtnGoalResolver::Unify(termFactory, item.head(), term);
+                           
+                           if(sub != nullptr)
+                           {
+                               factsToRemove.push_back(item.head());
+                           }
+                       }
+                       
+                       // Keep going
+                       return true;
+                   });
+                
+                if(factsToRemove.size() > 0)
+                {
+                    prog->Update(termFactory, factsToRemove, {});
+                }
+                
+                // Rule resolves to true so no new terms, no unifiers got added since it it is not unified
+                // Nothing to process on children so no special return handling
+                resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, {}, &(state->uniquifier)));
+                currentNode->continuePoint = ResolveContinuePoint::Return;
+            }
+        }
+        break;
+            
+        default:
+            StaticFailFastAssert(false);
+            break;
+    }
+}
+
+// print(?SetOfTerms...)
 void HtnGoalResolver::RulePrint(ResolveState *state)
 {
     shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1710,7 +1763,7 @@ void HtnGoalResolver::RulePrint(ResolveState *state)
     }
 }
 
-// sortBy(?v, [e](l))
+// sortBy(?Variable, [ComparisonOperator](?SetOfResolvedTerms...))
 // where ?v is a variable symbol, e is a comparison operator, and l is a logical expression.
 void HtnGoalResolver::RuleSortBy(ResolveState *state)
 {
@@ -1832,6 +1885,7 @@ void HtnGoalResolver::RuleSortBy(ResolveState *state)
 
 // Compares two terms to see if they are literally identical
 // The '==' operator does not unify the variables, so a variable will NOT be equal to anything other than the same unbound variable.
+// op(?Term, ?Term)
 void HtnGoalResolver::RuleTermCompare(ResolveState *state)
 {
     shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1880,6 +1934,7 @@ void HtnGoalResolver::RuleTermCompare(ResolveState *state)
     }
 }
 
+// showtraces(?SetOfResolvedTerms...)
 void HtnGoalResolver::RuleTrace(ResolveState *state)
 {
     shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1919,6 +1974,7 @@ void HtnGoalResolver::RuleTrace(ResolveState *state)
     }
 }
 
+// =(?Term, ?Term)
 // True if unification is possible between two terms, and then binding of variables occurs
 void HtnGoalResolver::RuleUnify(ResolveState *state)
 {
@@ -1968,6 +2024,7 @@ void HtnGoalResolver::RuleUnify(ResolveState *state)
     }
 }
 
+// write(?Term) | writeln(?Term)
 void HtnGoalResolver::RuleWrite(ResolveState *state)
 {
     shared_ptr<ResolveNode> currentNode = state->resolveStack->back();

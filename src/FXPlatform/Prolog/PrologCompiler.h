@@ -73,7 +73,6 @@ public:
         }
         
         return factory->CreateFunctor(name->ToString(), arguments);
-
     }
     
     static shared_ptr<HtnTerm> CreateTermFromItem(HtnTermFactory *factory, shared_ptr<Symbol> symbol)
@@ -102,7 +101,25 @@ public:
         string nameString = name->ToString();
         return factory->CreateVariable(nameString);
     }
-    
+
+    set<string> FindRuleLogicErrors(shared_ptr<HtnGoalResolver> resolver)
+    {
+        // Go through each rule in the system
+        // Do a DFS of terms it calls it and report when it loops
+        vector<string> stack;
+        set<string> loops;
+        m_state->AllRules([&](const HtnRule &rule)
+                          {
+                              string idName = rule.head()->name() + "/" + lexical_cast<string>(rule.head()->arity());
+                              stack.push_back(idName);
+                              CheckRuleRecurseTail(resolver, rule.head()->name(), rule.head()->arguments().size(), rule.tail(), stack, loops);
+                              stack.pop_back();
+                              return true;
+                          });
+        
+        return loops;
+    }
+
     vector<shared_ptr<HtnTerm>> &goals() { return m_goals; }
 
     ValueProperty(protected, shared_ptr<HtnRuleSet>, compilerOwnedRuleSet);
@@ -111,6 +128,143 @@ public:
     
 protected:
     vector<shared_ptr<HtnTerm>> m_goals;
+    
+    void CheckRuleRecurseTail(shared_ptr<HtnGoalResolver> resolver, const string &ruleHead, int arity, const vector<shared_ptr<HtnTerm>> &ruleTail, vector<string> &stack, set<string> &loops)
+    {
+        // Get the metadata if this resolves to a custom rule so we know where to recurse
+        HtnGoalResolver::CustomRuleType metadata;
+        bool isCustom = resolver->GetCustomRule(ruleHead, ruleTail.size(), metadata);
+        
+        // Grab each term in the tail
+        int termIndex = -1;
+        for(auto term : ruleTail)
+        {
+            ++termIndex;
+            if(isCustom)
+            {
+                CustomRuleArgType argType = HtnGoalResolver::GetCustomRuleArgBaseType(metadata.first, termIndex);
+                if(argType == CustomRuleArgType::TermOfResolvedTerms)
+                {
+                    // Need to recurse on the terms inside of this term and treat it like a transparent rule
+                    // i.e. don't put it on the stack
+                    CheckRuleRecurseTail(resolver, term->name(), term->arguments().size(), term->arguments(), stack, loops);
+                    continue;
+                }
+                else if(argType != CustomRuleArgType::ResolvedTerm)
+                {
+                    // Skip if this argument of our custom method is not something that will be resolved
+                    continue;
+                }
+            }
+            
+            // Find all rules that this term resolves to
+            if(term->isTrue())
+            {
+                continue;
+            }
+            else if(term->isCut())
+            {
+                continue;
+            }
+            else if(term->isVariable())
+            {
+                continue;
+            }
+            else if(term->isArithmetic())
+            {
+                // TODO: Figure out the right thing here
+                continue;
+            }
+            else
+            {
+                // See if it matches any other rules
+                HtnGoalResolver::CustomRuleType ignore;
+                bool isCustom = resolver->GetCustomRule(term->name(), term->arity(), ignore);
+                bool foundRule = false;
+                if(isCustom)
+                {
+                    foundRule = true;
+                    // Ignore loops for built in rules themselves (but not for what they call)
+                    CheckRuleForLoopStackCheck(resolver, term->name(), term->arity(), term->arguments(), stack, loops, true);
+                }
+                else
+                {
+                    m_state->AllRules([&](const HtnRule &potentialRule)
+                     {
+                         shared_ptr<HtnTerm> foundHead = potentialRule.head();
+                         if(foundHead->isEquivalentCompoundTerm(term))
+                         {
+                             foundRule = true;
+                             return CheckRuleForLoopStackCheck(resolver, foundHead->name(), foundHead->arity(), potentialRule.tail(), stack, loops, false);
+                         }
+                         else
+                         {
+                             return true;
+                         }
+                     });
+                }
+                
+                if(!foundRule)
+                {
+                    // See if it is declared
+                    string ruleArityString = lexical_cast<string>(term->arity());
+                    shared_ptr<HtnTerm> declaration = m_termFactory->CreateConstantFunctor("declare", { term->name(),  ruleArityString });
+                    if(!m_state->HasFact(declaration))
+                    {
+                        string idError = "Rule Not Found: " + term->name() + "/" + ruleArityString;
+                        auto foundError = loops.find(idError);
+                        if(foundError == loops.end())
+                        {
+                            TraceString1("Warning: {0}",
+                                         SystemTraceType::Planner, TraceDetail::Normal,
+                                         idError);
+                            loops.insert(idError);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    bool CheckRuleForLoopStackCheck(shared_ptr<HtnGoalResolver> resolver, const string &ruleHead, int arity, const vector<shared_ptr<HtnTerm>> &ruleTail, vector<string> &stack, set<string> &loops, bool ignoreLoops)
+    {
+        string idName = ruleHead + "/" + lexical_cast<string>(arity);
+        
+        if(!ignoreLoops)
+        {
+            vector<string>::iterator found = std::find(stack.begin(), stack.end(), idName);
+            if(found != stack.end())
+            {
+                stringstream stackString;
+                stackString << "Rule Loop: ";
+                while(found != stack.end())
+                {
+                    stackString << *found << "...";
+                    ++found;
+                }
+                stackString << "LOOP -> " + idName;
+                
+                auto loopFound = loops.find(stackString.str());
+                if(loopFound == loops.end())
+                {
+                    TraceString1("Warning: {0}",
+                                 SystemTraceType::Planner, TraceDetail::Normal,
+                                 stackString.str());
+                    loops.insert(stackString.str());
+                }
+                
+                // Don't bother matching any other equivalent terms because they will all be loops
+                return false;
+            }
+        }
+        
+        // Otherwise DFS
+        stack.push_back(idName);
+        CheckRuleRecurseTail(resolver, ruleHead, arity, ruleTail, stack, loops);
+        stack.pop_back();
+        return true;
+    }
+    
     void ParseAtom(shared_ptr<Symbol> symbol)
     {
         vector<shared_ptr<HtnTerm>> emptyTail;

@@ -273,7 +273,7 @@ double_t HtnTerm::GetDouble() const
 
 int64_t HtnTerm::GetInt() const
 {
-    return lexical_cast<int64_t>(*m_namePtr);
+    return (int64_t) GetDouble();
 }
 
 HtnTermType HtnTerm::GetTermType() const
@@ -430,7 +430,7 @@ void HtnTerm::GetUniqueID(const string **buffer, const string **bufferEnd) const
     {
         *buffer = reinterpret_cast<string *>(data);
         buffer++;
-        if(buffer == bufferEnd) StaticFailFastAssert(false);
+        if(buffer == bufferEnd) StaticFailFastAssertDesc(false, "Too many terms!");
     }
     
     // Put the size as the first "pointer"

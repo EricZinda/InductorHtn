@@ -17,7 +17,7 @@ shared_ptr<HtnTerm> HtnArithmeticOperators::Float(HtnTermFactory *factory, share
     shared_ptr<HtnTerm> leftEval = left->Eval(factory);
     if(leftEval != nullptr)
     {
-        return factory->CreateConstant(lexical_cast<string>(abs(leftEval->GetDouble())));
+        return factory->CreateConstant(lexical_cast<string>(leftEval->GetDouble()));
     }
     
     return nullptr;
@@ -28,7 +28,7 @@ shared_ptr<HtnTerm> HtnArithmeticOperators::Integer(HtnTermFactory *factory, sha
     shared_ptr<HtnTerm> leftEval = left->Eval(factory);
     if(leftEval != nullptr)
     {
-        return factory->CreateConstant(lexical_cast<string>(abs(leftEval->GetInt())));
+        return factory->CreateConstant(lexical_cast<string>(leftEval->GetInt()));
     }
     
     return nullptr;

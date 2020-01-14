@@ -28,7 +28,7 @@ indhtn is designed to be built with [CMake](https://cmake.org) like this:
 	Windows Visual Studio: 	Open the .sln file in the build directory using VS.
 
 ## Running Tests to make sure the build worked
-If you're using a command line generator of some sort, just run `runtests` on the commandline in your operating system of choice.
+If you're using a command line generator of some sort, just change to the directory where things got built and run `runtests` on the commandline in your operating system of choice.
 
 
 ### Xcode

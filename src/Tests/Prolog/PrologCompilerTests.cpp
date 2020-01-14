@@ -23,6 +23,137 @@ using namespace Prolog;
 
 SUITE(PrologCompilerTests)
 {
+    TEST(PrologCompilerMissingRuleDetection)
+    {
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler;
+        shared_ptr<HtnGoalResolver> resolver = shared_ptr<HtnGoalResolver>(new HtnGoalResolver());
+        set<string> loops;
+        string result;
+        
+        // Standard rule is missing
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile(string() +
+                                "test(A) :- foo(A). \r\n"
+                                ));
+        loops = compiler->FindRuleLogicErrors(resolver);
+        CHECK(loops.size() == 1);
+        result = (*loops.begin());
+        CHECK( result == "Rule Not Found: foo/1");
+        
+        // Rule inside custom rule is missing
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile(string() +
+                                "test(A) :- first(foo(A)). \r\n"
+                                ));
+        loops = compiler->FindRuleLogicErrors(resolver);
+        CHECK(loops.size() == 1);
+        result = (*loops.begin());
+        CHECK( result == "Rule Not Found: foo/1");
+
+        // rule inside built in functions with special term TermOfResolvedTerms should still detect missing
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile(string() +
+                                "test(A) :- sortBy(?A, <(foo(A))). \r\n"
+                                ));
+        loops = compiler->FindRuleLogicErrors(resolver);
+        CHECK(loops.size() == 1);
+        result = (*loops.begin());
+        CHECK( result == "Rule Not Found: foo/1");
+    }
+    
+    TEST(PrologCompilerLoopDetection)
+    {
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler;
+        shared_ptr<HtnGoalResolver> resolver = shared_ptr<HtnGoalResolver>(new HtnGoalResolver());
+        set<string> loops;
+        string result;
+        
+        // Different arguments, not a loop
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile(string() +
+                                "test(A) :- foo(A). \r\n"
+                                "foo(A) :- . \r\n"
+                                "foo(B, C) :- test(B). \r\n"
+                                ));
+        loops = compiler->FindRuleLogicErrors(resolver);
+        CHECK(loops.size() == 0);
+
+        // Same arguments, loop!
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile(string() +
+                                "test(A) :- foo(A). \r\n"
+                                "foo(B) :- test(B). \r\n"
+                                ));
+        loops = compiler->FindRuleLogicErrors(resolver);
+        CHECK(loops.size() == 2);
+        result = (*loops.begin());
+        CHECK( result == "Rule Loop: foo/1...test/1...LOOP -> foo/1");
+        result = (*(++loops.begin()));
+        CHECK(result == "Rule Loop: test/1...foo/1...LOOP -> test/1");
+
+        // Same arguments, first binding OK, second binding, loop!
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile(string() +
+                                "test(A) :- foo(A). \r\n"
+                                "foo(B) :- ok(B). \r\n"
+                                "ok(C) :- . \r\n"
+                                "foo(B) :- test(B). \r\n"
+                                ));
+        loops = compiler->FindRuleLogicErrors(resolver);
+        CHECK(loops.size() == 2);
+        CHECK((*loops.begin()) == "Rule Loop: foo/1...test/1...LOOP -> foo/1");
+        CHECK((*(++loops.begin())) == "Rule Loop: test/1...foo/1...LOOP -> test/1");
+        
+        // Using built in functions should still detect loop
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile(string() +
+                                "test(A) :- first(foo(A)). \r\n"
+                                "foo(B) :- test(B). \r\n"
+                                ));
+        loops = compiler->FindRuleLogicErrors(resolver);
+        CHECK(loops.size() == 2);
+        result = (*loops.begin());
+        CHECK(result == "Rule Loop: foo/1...test/1...first/1...LOOP -> foo/1");
+        result = (*(++loops.begin()));
+        CHECK(result == "Rule Loop: test/1...first/1...foo/1...LOOP -> test/1");
+
+        // built in functions *themselves* should not give a loop warning
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile(string() +
+                                "test(A) :- first(foo(A)). \r\n"
+                                "foo(B) :- first(bar(B)). \r\n"
+                                "bar(B) :- . \r\n"
+                                ));
+        loops = compiler->FindRuleLogicErrors(resolver);
+        CHECK(loops.size() == 0);
+        
+        // Using built in functions with special term TermOfResolvedTerms should still detect loop
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile(string() +
+                                "test(A) :- sortBy(?A, <(foo(A))). \r\n"
+                                "foo(B) :- test(B). \r\n"
+                                ));
+        loops = compiler->FindRuleLogicErrors(resolver);
+        CHECK(loops.size() == 2);
+        result = (*loops.begin());
+        CHECK(result == "Rule Loop: foo/1...test/1...sortBy/2...LOOP -> foo/1");
+        result = (*(++loops.begin()));
+        CHECK(result == "Rule Loop: test/1...sortBy/2...foo/1...LOOP -> test/1");
+    }
+    
     TEST(PrologCompilerTests)
     {
 //                        SetTraceFilter(SystemTraceType::Parsing, TraceDetail::Diagnostic);

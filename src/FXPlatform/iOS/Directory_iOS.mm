@@ -588,6 +588,22 @@ string Directory::MakeRelative(const string &fullPath)
     return fullPath.substr(0 + this->m_folder.size(), fullPath.size() - this->m_folder.size());
 }
 
+void Directory::RenameItem(const string &srcPathAndFilename, const string &dstPathAndFilename)
+{
+    @autoreleasepool
+    {
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSError *theError = nil;
+        if (![fileManager
+              moveItemAtPath: [NSString stringWithUTF8String:srcPathAndFilename.c_str()]
+              toPath: [NSString stringWithUTF8String:dstPathAndFilename.c_str()]
+              error: &theError])
+        {
+            throw TraceError(std::string([[theError localizedDescription] UTF8String]));
+        }
+    }
+}
+
 void Directory::ResetFoldersToSystemDefaults()
 {
     m_rootApplicationFolder = "";

@@ -20,10 +20,11 @@ class HtnTerm;
 class HtnOperator
 {
 public:
-    HtnOperator(std::shared_ptr<HtnTerm> head, const std::vector<std::shared_ptr<HtnTerm>> &additions, const std::vector<std::shared_ptr<HtnTerm>> &deletions) :
+    HtnOperator(std::shared_ptr<HtnTerm> head, const std::vector<std::shared_ptr<HtnTerm>> &additions, const std::vector<std::shared_ptr<HtnTerm>> &deletions, bool hidden = false) :
         m_additions(additions),
         m_deletions(deletions),
-        m_head(head)
+        m_head(head),
+        m_isHidden(hidden)
     {
     }
     
@@ -31,12 +32,14 @@ public:
     const std::vector<std::shared_ptr<HtnTerm>> deletions() const { return m_deletions; }
     int64_t dynamicSize() { return sizeof(HtnOperator) + (m_additions.size() + m_deletions.size()) * sizeof(std::shared_ptr<HtnTerm>); }
     const std::shared_ptr<HtnTerm> head() const { return m_head; }
-    std::string ToString() const;
+    std::string ToString() const;    
+    bool isHidden() { return m_isHidden; }
     
 private:
     std::vector<std::shared_ptr<HtnTerm>> m_additions;
     std::vector<std::shared_ptr<HtnTerm>> m_deletions;
     std::shared_ptr<HtnTerm> m_head;
+    bool m_isHidden;
 };
 
 #endif /* HtnOperator_hpp */

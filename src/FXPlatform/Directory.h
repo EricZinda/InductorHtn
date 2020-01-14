@@ -50,6 +50,7 @@ public:
     bool LocalFolderExists(const std::string &name);
     std::string MakeRelative(const std::string &fullPath);
     std::shared_ptr<FileStream> OpenFile(const std::string &filename, FileOpenStyle openStyle, AccessRights rights);
+    static void RenameItem(const std::string &srcPathAndFilename, const std::string &dstPathAndFilename);
     // Sets the default folders back to their system defaults
     static void ResetFoldersToSystemDefaults();
     // Supports temporarily revectoring where data gets stored and loaded from so that tests can be isolated from each other and the harness

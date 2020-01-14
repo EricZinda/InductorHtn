@@ -8,9 +8,9 @@
 
 #include <stdio.h>
 #include "PlannerTestBase.h"
-#include "FXPlatform/Htn/PrologParser.h"
+#include "FXPlatform/Prolog/PrologParser.h"
 #include "FXPlatform/Htn/HtnCompiler.h"
-#include "FXPlatform/Htn/HtnTermFactory.h"
+#include "FXPlatform/Prolog/HtnTermFactory.h"
 
 using namespace Prolog;
 

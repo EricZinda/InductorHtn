@@ -17,6 +17,8 @@
 #include "FXPlatform/NanoTrace.h"
 using namespace std;
 
+uint8_t HtnPlanner::m_abort = 0;
+
 const int indentSpaces = 11;
 const int highNodeMemoryWarning = 1000000;
 
@@ -64,7 +66,8 @@ enum class PlanNodeContinuePoint
     OutOfMemory,
     ReturnFromNextNormalMethodCondition,
     ReturnFromHandleTryTerm,
-    ReturnFromSetOfConditions
+    ReturnFromSetOfConditions,
+    Abort
 };
 
 class PlanNode
@@ -317,6 +320,14 @@ int64_t PlanState::dynamicSize()
     return currentMemory;
 }
 
+HtnPlanner::HtnPlanner() :
+    m_nextDocumentOrder(0),
+    m_dynamicSize(0)
+{
+    HtnPlanner::m_abort = 0;
+    m_resolver = shared_ptr<HtnGoalResolver>(new HtnGoalResolver());
+}
+
 HtnPlanner::~HtnPlanner()
 {
     // No need to delete goals since they are managed by TermFactory
@@ -334,10 +345,10 @@ HtnMethod *HtnPlanner::AddMethod(shared_ptr<HtnTerm> head, const vector<shared_p
     return method;
 }
 
-HtnOperator *HtnPlanner::AddOperator(shared_ptr<HtnTerm> head, const vector<shared_ptr<HtnTerm>> &addList, const vector<shared_ptr<HtnTerm>> &deleteList)
+HtnOperator *HtnPlanner::AddOperator(shared_ptr<HtnTerm> head, const vector<shared_ptr<HtnTerm>> &addList, const vector<shared_ptr<HtnTerm>> &deleteList, bool hidden)
 {
     // operators are owned by the Htn planner and deleted in the destructor. Since they are immutable, we can just record it now
-    HtnOperator *op = new HtnOperator(head, addList, deleteList);
+    HtnOperator *op = new HtnOperator(head, addList, deleteList, hidden);
     m_dynamicSize += op->dynamicSize();
     m_operators.insert(pair<string, HtnOperator *>(head->name(), op));
     return op;
@@ -372,12 +383,15 @@ bool HtnPlanner::CheckForOperator(PlanState *planState)
             // So, just update the state directly
             node->state->Update(factory, *finalRemovals, *finalAdditions);
             
-            // Add the operator to the current list
-            node->AddToOperators(operatorSubstituted);
+            if(!op->isHidden())
+            {
+                // Add the operator to the current list
+                node->AddToOperators(operatorSubstituted);
+            }
             
             // Continue recursion: No additional tasks since this is an operator, don't make a copy of the state since we don't need to try alternatives when backtracking
             Trace2("OPERATOR   ", "Operator '{0}' unifies with '{1}'", stack->size(), op->head()->ToString(), node->task->ToString());
-            Trace2("           ", "deletes:'{0}', adds:'{1}'", stack->size(), HtnTerm::ToString(*finalRemovals), HtnTerm::ToString(*finalAdditions));
+            Trace3("           ", "isHidden: {0}, deletes:'{1}', adds:'{2}'", stack->size(), op->isHidden(), HtnTerm::ToString(*finalRemovals), HtnTerm::ToString(*finalAdditions));
             node->SearchNextNode(planState, {}, PlanNodeContinuePoint::ReturnFromCheckForOperator);
             return true;
         }
@@ -642,11 +656,27 @@ shared_ptr<HtnPlanner::SolutionType> HtnPlanner::FindNextPlan(PlanState *planSta
     while(stack->size() > 0)
     {
         shared_ptr<PlanNode> node = stack->back();
-        switch(node->continuePoint)
+        PlanNodeContinuePoint continuePoint = node->continuePoint;
+        if(HtnPlanner::m_abort)
+        {
+            continuePoint = PlanNodeContinuePoint::Abort;
+        }
+        
+        switch(continuePoint)
         {
             case PlanNodeContinuePoint::Fail:
             {
                 FailFastAssert(false);
+            }
+            break;
+                
+            case PlanNodeContinuePoint::Abort:
+            {
+                Trace0("PARTIAL    ", "***** Aborted", stack->size());
+
+                // Don't allow to continue since we can't guarantee the tree is correct still
+                node->continuePoint = PlanNodeContinuePoint::Fail;
+                return SolutionFromCurrentNode(planState, node);
             }
             break;
                 
@@ -769,7 +799,7 @@ shared_ptr<HtnPlanner::SolutionType> HtnPlanner::FindNextPlan(PlanState *planSta
                         // Subtract off current memory usage from budget to tell Resolve how much it has to work with
                         int64_t currentMemory = planState->dynamicSize();
                         int64_t resolverMemory = 0;
-                        node->conditionResolutions = m_resolver.ResolveAll(factory, node->state.get(), *substitutedCondition, (int) (stack->size() + 1), (int) (memoryBudget - currentMemory), &resolverMemory);
+                        node->conditionResolutions = m_resolver->ResolveAll(factory, node->state.get(), *substitutedCondition, (int) (stack->size() + 1), (int) (memoryBudget - currentMemory), &resolverMemory);
                         planState->CheckHighestMemory(currentMemory + resolverMemory, "Resolver", resolverMemory);
                         if(factory->outOfMemory())
                         {

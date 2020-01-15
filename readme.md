@@ -1,7 +1,8 @@
-Inductor Hierarchical Task Network Engine
-=========================================
+Inductor Hierarchical Task Network Engine For C++ and Python
+============================================================
 This lightweight [Hierarchical Task Network](https://en.wikipedia.org/wiki/Hierarchical_task_network) engine was first used in production in an iPhone strategy game called [Exospecies](https://www.exospecies.com). Visit the [Exospecies Blog](https://blog.inductorsoftware.com) for more details.  It is designed to be small, memory constrained, and used as an implementation detail of an app. It used the classic [SHOP Planner](http://www.cs.umd.edu/projects/shop/description.html) as inspiration and largely followed that model.
 
+It can be used natively in C++ and it has bindings that support Python 3.x as well (using CTypes).
 Use and enjoy!
 
 
@@ -27,8 +28,16 @@ indhtn is designed to be built with [CMake](https://cmake.org) like this:
 	Mac Xcode:				Open the IndProlog.xcodeproj file in the build directory using Xcode.
 	Windows Visual Studio: 	Open the .sln file in the build directory using VS.
 
+
 ## Running Tests to make sure the build worked
 If you're using a command line generator of some sort, just change to the directory where things got built and run `runtests` on the commandline in your operating system of choice.
+
+To run the Python tests:
+	Make sure Python 3.x is on your path
+	Make sure the indhtnpy.dll that gets built is on your path
+	get to the /src/Python directory
+	run "python PythonUsage.py"
+	Look at the source for PythonUsage.py for basic usage instructions
 
 
 ### Xcode
@@ -37,6 +46,7 @@ In Xcode, after you build you should change the scheme to `runtests` and then ch
 
 ### Visual Studio
 Set the default project to runtests and hit F5. You'll get a console window with the results
+
 
 ## Directory Structure
 99.99% of the code for the Htn is platform agnostic (or at least should be). It has been built and tested on Windows, Mac and iOS. The platform specific code is located in the iOS and Win directorys and is currently only a single function for debug logging.
@@ -51,8 +61,7 @@ Set the default project to runtests and hit F5. You'll get a console window with
 - /Tests:				Basic smoke tests used to make sure it compiled properly
 
 ## Getting Started
-
-Read GettingStarted.md for a tutorial on how to use InductorHTN.
+Read GettingStarted.md for a tutorial on how to use InductorHTN in C++ and Python.
 
 License
 ---------

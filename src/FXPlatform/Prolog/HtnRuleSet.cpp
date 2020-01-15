@@ -14,8 +14,8 @@ using namespace std;
 
 void HtnRuleSet::HtnSharedRules::AddRule(shared_ptr<HtnTerm> head, vector<shared_ptr<HtnTerm>> tail)
 {
-    FailFastAssert(!m_isLocked);
-    FailFastAssert(head->name().size() > 0);
+    FailFastAssertDesc(!m_isLocked, "Internal Error");
+    FailFastAssertDesc(head->name().size() > 0, "term name must have at least one character");
     HtnTerm::HtnTermID headID = head->GetUniqueID();
     
     // Ground facts must be unique
@@ -33,10 +33,9 @@ void HtnRuleSet::HtnSharedRules::AddRule(shared_ptr<HtnTerm> head, vector<shared
                     TraceString1("HtnRuleSet::HtnSharedRules::AddRule duplicate rule '{0}'",
                                  SystemTraceType::Solver, TraceDetail::Normal,
                                  item.head()->ToString());
+                    FailFastAssertDesc(false, ("Duplicate Rule added: " + item.head()->ToString()).c_str());
                 }
-            }
-            
-            FailFastAssert(false);
+            }            
         }
     }
 
@@ -56,7 +55,7 @@ void HtnRuleSet::HtnSharedRules::AddRule(shared_ptr<HtnTerm> head, vector<shared
 
 void HtnRuleSet::HtnSharedRules::ClearAll()
 {
-    FailFastAssert(!m_isLocked);
+    FailFastAssertDesc(!m_isLocked, "Internal Error");
     m_rules.clear();
     m_ruleHeads.clear();
     m_ruleIndex.clear();
@@ -73,7 +72,7 @@ bool HtnRuleSet::HtnSharedRules::HasFact(shared_ptr<HtnTerm> term) const
 void HtnRuleSet::AddRule(shared_ptr<HtnTerm> head, vector<shared_ptr<HtnTerm>> tail)
 {
     // Should not be updating facts at this point
-    FailFastAssert(m_factsDiff.size() == 0);
+    FailFastAssertDesc(m_factsDiff.size() == 0, "Internal Error");
     m_sharedRules->AddRule(head, tail);
 }
 
@@ -214,7 +213,7 @@ void HtnRuleSet::Update(HtnTermFactory *factory, const vector<shared_ptr<HtnTerm
     for(auto item : factsToRemove)
     {
         // All removals must be ground
-        FailFastAssert(item->isGround());
+        FailFastAssertDesc(item->isGround(), ("Items to be removed must be ground: " + item->ToString()).c_str());
 
         // Can only remove something that exists
         if(!HasFact(item))
@@ -249,7 +248,7 @@ void HtnRuleSet::Update(HtnTermFactory *factory, const vector<shared_ptr<HtnTerm
         if(diffOrderToRemove != -1)
         {
             size_t erasedCount = m_factAdditions.erase(diffOrderToRemove);
-            FailFastAssert(erasedCount == 1);
+            FailFastAssertDesc(erasedCount == 1, "Internal Error");
         }
     }
 
@@ -257,7 +256,7 @@ void HtnRuleSet::Update(HtnTermFactory *factory, const vector<shared_ptr<HtnTerm
     for(auto item : factsToAdd)
     {
         // All additions must be ground
-        FailFastAssert(item->isGround());
+        FailFastAssertDesc(item->isGround(), ("All additions must be ground: " + item->ToString()).c_str());
 
         // Can only add something that doesn't exist yet
         if(HasFact(item))

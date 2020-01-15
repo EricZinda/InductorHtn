@@ -83,7 +83,7 @@ double NanoTrace::TraceImpl(const string &traceKey, const double startTime, int 
     record.dataCount(dataCount);
     record.elapsedTime(0);
     record.traceKey(traceKey);
-    FailFastAssert(sizeof(time_t) <= sizeof(record.timestamp()));
+    FailFastAssertDesc(sizeof(time_t) <= sizeof(record.timestamp()), "Internal Error");
     record.timestamp(time(nullptr));
 
     switch(dataCount)

@@ -269,7 +269,7 @@ bool MethodComparer(const pair<HtnMethod *, UnifierType> &left, const pair<HtnMe
     }
     else
     {
-        StaticFailFastAssert(false);
+        StaticFailFastAssertDesc(false, "Internal Error");
         return false;
     }
 }
@@ -314,7 +314,7 @@ int64_t PlanState::dynamicSize()
         // memory used by everything on the stack
         stack->size() * sizeof(shared_ptr<PlanNode>) + stackSize;
     
-    FailFastAssert(currentMemory >= 0);
+    FailFastAssertDesc(currentMemory >= 0, "Internal Error");
     CheckHighestMemory(currentMemory, "stackSize", stackSize);
     
     return currentMemory;
@@ -533,7 +533,7 @@ shared_ptr<PlanNode> HtnPlanner::FindNodeWithID(vector<shared_ptr<PlanNode>> &st
         }
     }
     
-    StaticFailFastAssert(false);
+    StaticFailFastAssertDesc(false, "Internal Error");
     return nullptr;
 }
 
@@ -666,7 +666,7 @@ shared_ptr<HtnPlanner::SolutionType> HtnPlanner::FindNextPlan(PlanState *planSta
         {
             case PlanNodeContinuePoint::Fail:
             {
-                FailFastAssert(false);
+                FailFastAssertDesc(false, "Internal Error");
             }
             break;
                 
@@ -839,7 +839,7 @@ shared_ptr<HtnPlanner::SolutionType> HtnPlanner::FindNextPlan(PlanState *planSta
                         else
                         {
                             // There should be no other method types
-                            FailFastAssert(false);
+                            FailFastAssertDesc(false, "Internal Error");
                             continue;
                         }
                     }
@@ -1099,23 +1099,23 @@ string HtnPlanner::ToStringFacts(shared_ptr<SolutionsType> solutions)
     }
 }
 
-string HtnPlanner::ToStringSolution(shared_ptr<SolutionType> solution)
+string HtnPlanner::ToStringSolution(shared_ptr<SolutionType> solution, bool json)
 {
     if(solution == nullptr)
     {
-        return "null";
+        return json ? "" : "null";
     }
     else
     {
-        return HtnTerm::ToString(solution->first);
+        return HtnTerm::ToString(solution->first, false, json);
     }
 }
 
-string HtnPlanner::ToStringSolutions(shared_ptr<SolutionsType> solutions)
+string HtnPlanner::ToStringSolutions(shared_ptr<SolutionsType> solutions, bool json)
 {
     if(solutions == nullptr)
     {
-        return "null";
+        return json ? "" : "null";
     }
     else
     {
@@ -1123,7 +1123,14 @@ string HtnPlanner::ToStringSolutions(shared_ptr<SolutionsType> solutions)
         result << "[ ";
         for(shared_ptr<SolutionType> solution : *solutions)
         {
-            result << "{ " + ToStringSolution(solution) + " } ";
+            if (json)
+            {
+                result << "[ " + ToStringSolution(solution, true) + " ] ";
+            }
+            else
+            {
+                result << "{ " + ToStringSolution(solution) + " } ";
+            }
         }
         result << "]";
         

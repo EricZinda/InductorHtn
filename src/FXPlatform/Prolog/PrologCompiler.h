@@ -112,7 +112,7 @@ public:
                           {
                               string idName = rule.head()->name() + "/" + lexical_cast<string>(rule.head()->arity());
                               stack.push_back(idName);
-                              CheckRuleRecurseTail(resolver, rule.head()->name(), rule.head()->arguments().size(), rule.tail(), stack, loops);
+                              CheckRuleRecurseTail(resolver, rule.head()->name(), (int) rule.head()->arguments().size(), rule.tail(), stack, loops);
                               stack.pop_back();
                               return true;
                           });
@@ -133,7 +133,7 @@ protected:
     {
         // Get the metadata if this resolves to a custom rule so we know where to recurse
         HtnGoalResolver::CustomRuleType metadata;
-        bool isCustom = resolver->GetCustomRule(ruleHead, ruleTail.size(), metadata);
+        bool isCustom = resolver->GetCustomRule(ruleHead, (int) ruleTail.size(), metadata);
         
         // Grab each term in the tail
         int termIndex = -1;
@@ -147,7 +147,7 @@ protected:
                 {
                     // Need to recurse on the terms inside of this term and treat it like a transparent rule
                     // i.e. don't put it on the stack
-                    CheckRuleRecurseTail(resolver, term->name(), term->arguments().size(), term->arguments(), stack, loops);
+                    CheckRuleRecurseTail(resolver, term->name(), (int) term->arguments().size(), term->arguments(), stack, loops);
                     continue;
                 }
                 else if(argType != CustomRuleArgType::ResolvedTerm)

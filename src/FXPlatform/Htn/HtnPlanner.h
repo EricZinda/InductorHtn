@@ -94,8 +94,8 @@ public:
     // Very inefficient but useful for testing
     bool DebugHasMethod(const std::string &head, const std::string &constraints, const std::string &tasks);
     bool HasOperator(const std::string &head, const std::string &deletions, const std::string &additions);
-    static std::string ToStringSolution(std::shared_ptr<SolutionType> solution);
-    static std::string ToStringSolutions(std::shared_ptr<SolutionsType> solutions);
+    static std::string ToStringSolution(std::shared_ptr<SolutionType> solution, bool json = false);
+    static std::string ToStringSolutions(std::shared_ptr<SolutionsType> solutions, bool json = false);
     static std::string ToStringFacts(std::shared_ptr<SolutionType> solution);
     static std::string ToStringFacts(std::shared_ptr<SolutionsType> solutions);
 

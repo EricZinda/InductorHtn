@@ -70,8 +70,8 @@ public:
     static std::shared_ptr<HtnTerm> SubstituteUnifiers(HtnTermFactory *factory, const UnifierType &source, std::shared_ptr<HtnTerm> target);
     static std::shared_ptr<UnifierType> SubstituteUnifiers(HtnTermFactory *factory, const UnifierType &source, const UnifierType &destination);
     static std::shared_ptr<std::vector<std::shared_ptr<HtnTerm>>> SubstituteUnifiers(HtnTermFactory *factory, const UnifierType &source, const std::vector<std::shared_ptr<HtnTerm>> &terms);
-    static std::string ToString(const std::vector<UnifierType> *unifierList);
-    static std::string ToString(const UnifierType &unifier);
+    static std::string ToString(const std::vector<UnifierType> *unifierList, bool json = false);
+    static std::string ToString(const UnifierType &unifier, bool json = false);
     static std::shared_ptr<UnifierType> Unify(HtnTermFactory *factory, std::shared_ptr<HtnTerm> term1, std::shared_ptr<HtnTerm> term2);
 
 private:

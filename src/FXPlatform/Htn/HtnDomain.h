@@ -8,7 +8,8 @@
 
 #ifndef HtnDomain_h
 #define HtnDomain_h
-
+#include <functional>
+#include <vector>
 class HtnMethod;
 enum class HtnMethodType;
 class HtnOperator;

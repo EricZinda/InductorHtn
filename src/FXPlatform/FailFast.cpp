@@ -9,7 +9,7 @@ bool terminateCalled = false;
 
 void failfastThis_uncaught_exception_handler(void *thisPtr, bool expression, const char *file, long line)
 {
-    failfastThis_uncaught_exception_handler(thisPtr, expression, "[No Message]", file, line);
+    failfastThis_uncaught_exception_handler(thisPtr, expression, "Internal Error", file, line);
 }
 
 void failfastThis_uncaught_exception_handler(void *thisPtr, bool expression, const char *description, const char *file, long line)
@@ -25,7 +25,7 @@ void failfastThis_uncaught_exception_handler(void *thisPtr, bool expression, con
         // http://stackoverflow.com/questions/13777446/ios-how-to-get-stack-trace-of-an-unhandled-stdexception
         if(failFastIsException)
         {
-            throw runtime_error(description);
+            throw runtime_error((string(description) + " -- file: " + string(file) + ", line:" + lexical_cast<string>(line)).c_str());
         }
         else
         {

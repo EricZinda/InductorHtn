@@ -860,7 +860,7 @@ shared_ptr<UnifierType> HtnGoalResolver::ResolveNext(ResolveState *state)
                         // you ask "which predicates can be derived?" or in other words "which formulas are true?".
                         // So we shortcut out which will exit everything
                         Trace1("ERROR      ", "goal is a variable:{0}", indentLevel, state->fullTrace, goal->ToString());
-                        StaticFailFastAssert(false);
+                        StaticFailFastAssertDesc(false, ("goal can't be a variable: " + goal->ToString()).c_str());
                         currentNode->continuePoint = ResolveContinuePoint::ProgramError;
                         return nullptr;
                     }
@@ -964,8 +964,8 @@ void HtnGoalResolver::RuleAggregate(ResolveState *state)
             if(goal->arguments().size() < 3 || !goal->arguments()[0]->isVariable() || !goal->arguments()[1]->isVariable())
             {
                 // Invalid program
-                Trace2("ERROR      ", "{0}}(?AggregateVariable, ?Variable, terms...) must have at least 3 terms where the first two are variables: {1}", state->initialIndent + resolveStack->size(), state->fullTrace, aggName, goal->ToString());
-                StaticFailFastAssert(false);
+                Trace2("ERROR      ", "{0}(?AggregateVariable, ?Variable, terms...) must have at least 3 terms where the first two are variables: {1}", state->initialIndent + resolveStack->size(), state->fullTrace, aggName, goal->ToString());
+                StaticFailFastAssertDesc(false, ("item(?AggregateVariable, ?Variable, terms...) must have at least 3 terms where the first two are variables : " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -1096,7 +1096,7 @@ void HtnGoalResolver::RuleAssert(ResolveState* state)
 			{
 				// Invalid program
 				Trace1("ERROR      ", "assert() must have exactly one term: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-				StaticFailFastAssert(false);
+				StaticFailFastAssertDesc(false, ("assert() must have exactly one term: " + goal->ToString()).c_str());
 				currentNode->continuePoint = ResolveContinuePoint::ProgramError;
 			}
             else
@@ -1167,7 +1167,7 @@ void HtnGoalResolver::RuleCount(ResolveState *state)
             {
                 // Invalid program
                 Trace1("ERROR      ", "count(?Var, terms...) must have at least two terms where the first is a variable: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                StaticFailFastAssert(false);
+                StaticFailFastAssertDesc(false, ("count(?Var, terms...) must have at least two terms where the first is a variable: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -1229,7 +1229,7 @@ void HtnGoalResolver::RuleDistinct(ResolveState *state)
             {
                 // Invalid program
                 Trace1("ERROR      ", "distinct(?Var, terms...) must have at least two terms where the first is a variable: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                StaticFailFastAssert(false);
+                StaticFailFastAssertDesc(false, ("distinct(?Var, terms...) must have at least two terms where the first is a variable: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -1407,7 +1407,7 @@ void HtnGoalResolver::RuleForAll(ResolveState *state)
             {
                 // Invalid program
                 Trace1("ERROR      ", "forall(term1, term2) must have exactly two terms: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                StaticFailFastAssert(false);
+                StaticFailFastAssertDesc(false, ("forall(term1, term2) must have exactly two terms: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -1471,7 +1471,7 @@ void HtnGoalResolver::RuleIs(ResolveState *state)
             {
                 // Invalid program
                 Trace1("ERROR      ", "is() must have two terms where one is a variable and one is arithmetic and ground:{0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                StaticFailFastAssert(false);
+                StaticFailFastAssertDesc(false, ("is() must have two terms where one is a variable and one is arithmetic and ground: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -1521,7 +1521,7 @@ void HtnGoalResolver::RuleNewline(ResolveState *state)
             {
                 // Invalid program
                 Trace2("ERROR      ", "nl() must have zero terms: {1}", state->initialIndent + resolveStack->size(), state->fullTrace, opName, goal->ToString());
-                StaticFailFastAssert(false);
+                StaticFailFastAssertDesc(false, ("nl() must have zero terms: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -1612,7 +1612,7 @@ void HtnGoalResolver::RuleRetract(ResolveState* state)
 			{
 				// Invalid program
 				Trace1("ERROR      ", "retract() must have exactly one term: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-				StaticFailFastAssert(false);
+				StaticFailFastAssertDesc(false, ("retract() must have exactly one term: " + goal->ToString()).c_str());
 				currentNode->continuePoint = ResolveContinuePoint::ProgramError;
 			}
             else
@@ -1690,7 +1690,7 @@ void HtnGoalResolver::RuleRetractAll(ResolveState* state)
             {
                 // Invalid program
                 Trace1("ERROR      ", "retractall() must have exactly one term: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                StaticFailFastAssert(false);
+                StaticFailFastAssertDesc(false, ("retractall() must have exactly one term: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -1783,7 +1783,7 @@ void HtnGoalResolver::RuleSortBy(ResolveState *state)
             {
                 // Invalid program
                 Trace1("ERROR      ", "sortBy(?Var, comparer(...)) must have exactly two terms where the first is a variable: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                StaticFailFastAssert(false);
+                StaticFailFastAssertDesc(false, ("sortBy(?Var, comparer(...)) must have exactly two terms where the first is a variable: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -1901,7 +1901,7 @@ void HtnGoalResolver::RuleTermCompare(ResolveState *state)
             {
                 // Invalid program
                 Trace1("ERROR      ", "{0} must have two terms", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                StaticFailFastAssert(false);
+                StaticFailFastAssertDesc(false, ("Must have two terms: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -1991,7 +1991,7 @@ void HtnGoalResolver::RuleUnify(ResolveState *state)
             {
                 // Invalid program
                 Trace1("ERROR      ", "=() must have two terms: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                StaticFailFastAssert(false);
+                StaticFailFastAssertDesc(false, ("=() must have two terms: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -2041,7 +2041,7 @@ void HtnGoalResolver::RuleWrite(ResolveState *state)
             {
                 // Invalid program
                 Trace2("ERROR      ", "{0}() must have one term: {1}", state->initialIndent + resolveStack->size(), state->fullTrace, opName, goal->ToString());
-                StaticFailFastAssert(false);
+                StaticFailFastAssertDesc(false, ("Must have one term: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
@@ -2140,40 +2140,47 @@ shared_ptr<vector<shared_ptr<HtnTerm>>> HtnGoalResolver::SubstituteUnifiers(HtnT
     return substituted;
 }
 
-string HtnGoalResolver::ToString(const vector<UnifierType> *unifierList)
+string HtnGoalResolver::ToString(const vector<UnifierType> *unifierList, bool json)
 {
     if(unifierList == nullptr)
     {
-        return "null";
+        return json ? "" : "null";
     }
     
     stringstream stream;
     
-    stream << "(";
+    stream << (json ? "[" : "(");
     bool hasItem = false;
     for(auto item : *unifierList)
     {
-        stream << (hasItem ? ", " : "") << ToString(item);
+        stream << (hasItem ? ", " : "") << ToString(item, json);
         hasItem = true;
     }
     
-    stream << ")";
+    stream << (json ? "]" : ")");
     return stream.str();
 }
 
-string HtnGoalResolver::ToString(const UnifierType &unifier)
+string HtnGoalResolver::ToString(const UnifierType &unifier, bool json)
 {
     stringstream stream;
     
-    stream << "(";
+    stream << (json ? "{" : "(");
     bool hasItem = false;
     for(auto item : unifier)
     {
-        stream << (hasItem ? ", " : "") << item.first->ToString() << " = " << item.second->ToString();
+        if (json)
+        {
+            stream << (hasItem ? ", " : "") << "\"" << item.first->ToString() << "\" : " << item.second->ToString(false, true);
+        }
+        else
+        {
+            stream << (hasItem ? ", " : "") << item.first->ToString() << " = " << item.second->ToString();
+        }
         hasItem = true;
     }
     
-    stream << ")";
+    stream << (json ? "}" : ")");
     return stream.str();
 }
 

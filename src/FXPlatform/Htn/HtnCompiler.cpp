@@ -191,8 +191,8 @@ void HtnCompiler::ParseRule(shared_ptr<Symbol> symbol)
     HtnMethodType isSetOf = HtnMethodType::Normal;
     bool isDefault = false;
     bool isOperatorHidden = false;
-    shared_ptr<HtnTerm>constraint = nullptr;
-    shared_ptr<HtnTerm>del = nullptr;
+    shared_ptr<HtnTerm> constraint = nullptr;
+    shared_ptr<HtnTerm> del = nullptr;
     for(auto item : list)
     {
         if(item->isConstant() && item->name() == "else")
@@ -213,23 +213,25 @@ void HtnCompiler::ParseRule(shared_ptr<Symbol> symbol)
         }
         else if(item->name() == "if")
         {
-            FailFastAssert(constraint == nullptr);
+            FailFastAssertDesc(constraint == nullptr, "There can only be one if(): if(), do().");
             constraint = item;
         }
         else if(item->name() == "do")
         {
-            FailFastAssert(constraint != nullptr);
+            FailFastAssertDesc(constraint != nullptr, "do() needs an if() before it: if(), do().");
             m_domain->AddMethod(CreateTermFromFunctor(m_termFactory, head), constraint->arguments(), item->arguments(), isSetOf, isDefault);
             return;
         }
         else if(item->name() == "del")
         {
-            FailFastAssert(del == nullptr && isSetOf == HtnMethodType::Normal && isDefault == false && constraint == nullptr);
+            FailFastAssertDesc(del == nullptr && isSetOf == HtnMethodType::Normal && isDefault == false && constraint == nullptr,
+                "Improper del() statement.");
             del = item;
         }
         else if(item->name() == "add")
         {
-            FailFastAssert(del != nullptr && isSetOf == HtnMethodType::Normal && isDefault == false && constraint == nullptr);
+            FailFastAssertDesc(del != nullptr && isSetOf == HtnMethodType::Normal && isDefault == false && constraint == nullptr,
+                "Improper add() statement");
             m_domain->AddOperator(CreateTermFromFunctor(m_termFactory, head), item->arguments(), del->arguments(), isOperatorHidden);
             return;
         }

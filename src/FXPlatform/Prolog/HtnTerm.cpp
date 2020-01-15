@@ -87,7 +87,7 @@ int64_t HtnTerm::dynamicSize()
 shared_ptr<HtnTerm> HtnTerm::Eval(HtnTermFactory *factory)
 {
     // Make sure we are not intermixing terms from different factories
-    FailFastAssert(this->m_factory.lock().get() == factory);
+    FailFastAssertDesc(this->m_factory.lock().get() == factory, ("Term comes from wrong factory: " + this->ToString()).c_str());
 
     if(isVariable())
     {
@@ -120,7 +120,7 @@ shared_ptr<HtnTerm> HtnTerm::Eval(HtnTermFactory *factory)
             else if(*m_namePtr == "=>")
             {
                 // Avoid common error that is really confusing.  Prolog uses >=
-                FailFastAssert(false);
+                FailFastAssertDesc(false, "=> is incorrect in Prolog.  Use >=");
                 return nullptr;
             }
             else if(*m_namePtr == ">=")
@@ -134,7 +134,7 @@ shared_ptr<HtnTerm> HtnTerm::Eval(HtnTermFactory *factory)
             else if(*m_namePtr == "<=")
             {
                 // Avoid common error that is really confusing.  Prolog uses =<
-                FailFastAssert(false);
+                FailFastAssertDesc(false, "<= is incorrect in Prolog. Use =<");
                 return nullptr;
             }
             else if(*m_namePtr == "=<")
@@ -226,7 +226,7 @@ bool HtnTerm::isArithmetic() const
     else if(*m_namePtr == "=>" || *m_namePtr == "<=")
     {
         // Avoid really common issues
-        FailFastAssert(false);
+        FailFastAssertDesc(false, "Incorrect symbol. Prolog uses >= and =<.");
         return false;
     }
     else
@@ -450,7 +450,7 @@ HtnTerm::HtnTermID HtnTerm::GetUniqueID() const
 shared_ptr<HtnTerm> HtnTerm::MakeVariablesUnique(HtnTermFactory *factory, bool onlyDontCareVariables, const string &uniquifier, int *dontCareCount)
 {
     // Make sure we are not intermixing terms from different factories
-    FailFastAssert(factory != nullptr && this->m_factory.lock().get() == factory);
+    FailFastAssertDesc(factory != nullptr && this->m_factory.lock().get() == factory, ("Term comes from different factory: " + this->ToString()).c_str());
 
     if(this->isVariable())
     {
@@ -759,16 +759,19 @@ int HtnTerm::TermCompare(const HtnTerm &other)
     }
 }
 
-string HtnTerm::ToString(bool isInList)
+string HtnTerm::ToString(bool isInList, bool json)
 {
         stringstream stream;
-        if(isConstant())
+        if(isConstant() || isVariable())
         {
-            stream << *m_namePtr;
-        }
-        else if(isVariable())
-        {
-            stream << *m_namePtr;
+            if (json)
+            {
+                stream << "{\"" << *m_namePtr << "\":[]}";
+            }
+            else
+            {
+                stream << *m_namePtr;
+            }
         }
         else
         {
@@ -785,13 +788,20 @@ string HtnTerm::ToString(bool isInList)
             }
             else
             {
-                stream << *m_namePtr << "(";
+                if (json)
+                {
+                    stream << "{\"" << *m_namePtr << "\":[";
+                }
+                else
+                {
+                    stream << *m_namePtr << "(";
+                }
             }
     
             bool hasArg = false;
             for(auto arg : m_arguments)
             {
-                stream << (hasArg ? "," : "") << arg->ToString(startedList);
+                stream << (hasArg ? "," : "") << arg->ToString(startedList, json);
                 hasArg = true;
             }
     
@@ -801,14 +811,14 @@ string HtnTerm::ToString(bool isInList)
             }
             else
             {
-                stream << ")";
+                stream << (json ? "]}" : ")");
             }
         }
     
         return stream.str();
 }
 
-string HtnTerm::ToString(const vector<shared_ptr<HtnTerm>> &goals, bool surroundWithParenthesis)
+string HtnTerm::ToString(const vector<shared_ptr<HtnTerm>> &goals, bool surroundWithParenthesis, bool json)
 {
     stringstream stream;
     
@@ -816,7 +826,7 @@ string HtnTerm::ToString(const vector<shared_ptr<HtnTerm>> &goals, bool surround
     bool hasItem = false;
     for(auto item : goals)
     {
-        stream << (hasItem ? ", " : "") << item->ToString();
+        stream << (hasItem ? ", " : "") << item->ToString(false, json);
         hasItem = true;
     }
     if(surroundWithParenthesis) { stream << ")"; }

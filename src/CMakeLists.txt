@@ -9,10 +9,15 @@ add_library(testLib "")
 add_executable(indhtn main.cpp)
 add_library(lib "")
 
+# Make the Python interface a dll as required by ctypes
+# https://stackoverflow.com/questions/6499364/generating-dll-using-cmake
+add_library(indhtnpy SHARED "")
+
 target_include_directories(indhtn PRIVATE ./)
 target_include_directories(lib PRIVATE ./)
 target_include_directories(testLib PRIVATE ./)
 target_include_directories(runtests PRIVATE ./)
+target_include_directories(indhtnpy PRIVATE ./)
 
 #### Prolog
 
@@ -45,5 +50,10 @@ if(WIN32)
 else()
 	add_subdirectory(UnitTest++/Posix)
 endif()
+
+#### Python Interface
+
+add_subdirectory(Python)
+target_link_libraries(indhtnpy lib)
 
 

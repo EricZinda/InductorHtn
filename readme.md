@@ -33,11 +33,11 @@ indhtn is designed to be built with [CMake](https://cmake.org) like this:
 If you're using a command line generator of some sort, just change to the directory where things got built and run `runtests` on the commandline in your operating system of choice.
 
 To run the Python tests:
-	Make sure Python 3.x is on your path
-	Make sure the indhtnpy.dll that gets built is on your path
-	get to the /src/Python directory
-	run "python PythonUsage.py"
-	Look at the source for PythonUsage.py for basic usage instructions
+1. Make sure Python 3.x is on your path
+2. Make sure the indhtnpy.dll that gets built is on your path
+3. Get to the /src/Python directory
+4. Run "python PythonUsage.py"
+5. Look at the source for PythonUsage.py for basic usage instructions
 
 
 ### Xcode
@@ -56,7 +56,7 @@ Set the default project to runtests and hit F5. You'll get a console window with
 - /FXPlatform/iOS: 		Code specific to iOS and Mac
 - /FXPlatform/Win: 		Code specific to Windows
 - /FXPlatform/Prolog: 	The prolog compiler and runtime engine
-
+- /Python:				The Python interface and usage examples
 - /UnitTest++:			The UnitTest++ framework used to write unit tests (https://github.com/unittest-cpp/unittest-cpp)
 - /Tests:				Basic smoke tests used to make sure it compiled properly
 

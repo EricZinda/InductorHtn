@@ -18,7 +18,7 @@ namespace Prolog
     char PrologFunctorError[] = "Expected functor (e.g. a(b, c)";
     char PrologRuleError[] = "Expected rule (e.g. a() :- b()";
     char PrologDocumentError[] = "Expected Prolog document (i.e. rules or facts, separated by '.'";
-    char PrologCommentError[] = "Expected comment (e.g. '/* */' or '#')";
+    char PrologCommentError[] = "Expected comment (e.g. '/* */' or '%')";
     char PrologQueryError[] = "Expected query (e.g. a(B).)";
 
 	char BeginCommentBlock[] = "/*";

@@ -736,6 +736,82 @@ SUITE(HtnGoalResolverTests)
         std::cout.rdbuf(coutbuf); //reset to standard output again
     }
     
+    TEST(HtnGoalResolverAtomicTests)
+    {
+        HtnGoalResolver resolver;
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        string testState;
+        string goals;
+        string finalUnifier;
+        shared_ptr<vector<UnifierType>> unifier;
+
+        // ***** atomic(mia). should resolve to true
+        compiler->Clear();
+        testState = string() +
+            "goals(atomic(mia)).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "(())");
+
+        // ***** atomic(mia()). should resolve to true
+        compiler->Clear();
+        testState = string() +
+            "goals(atomic(mia())).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "(())");
+
+        // ***** atomic(8). should resolve to true
+        compiler->Clear();
+        testState = string() +
+            "goals(atomic(8)).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "(())");
+
+        // ***** atomic(3.25). should resolve to true
+        compiler->Clear();
+        testState = string() +
+            "goals(atomic(3.25)).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "(())");
+
+        // ***** atomic(loves(vincent, mia)). should resolve to false
+        compiler->Clear();
+        testState = string() +
+            "goals(atomic(loves(vincent, mia))).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "null");
+
+        // ***** atomic(?X) (unbound variable) should resolve to False
+        compiler->Clear();
+        testState = string() +
+            "goals(atomic(?X)).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "null");
+
+        // ***** atomic(?X) (bound variable) should resolve to True
+        compiler->Clear();
+        testState = string() +
+            "goals(=(?X, mia), atomic(?X)).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = mia))");
+    }
+
+
     TEST(HtnGoalResolverTrueFalseTests)
     {
         HtnGoalResolver resolver;

@@ -51,6 +51,8 @@ public:
     shared_ptr<HtnCompiler> m_compiler;
     shared_ptr<PrologStandardCompiler> m_prologCompiler;
     shared_ptr<HtnTermFactory> m_factory;
+    // We save the last set of solutions so their state can be applied if the user chooses to
+    shared_ptr<HtnPlanner::SolutionsType> m_lastSolutions;
     shared_ptr<HtnPlanner> m_planner;
     shared_ptr<HtnGoalResolver> m_resolver;
     shared_ptr<HtnRuleSet> m_state;
@@ -99,6 +101,19 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
         catch (runtime_error & error)
         {
             return GetCharPtrFromString(error.what());
+        }
+    }
+
+    __declspec(dllexport) bool __stdcall HtnApplySolution(HtnPlannerPythonWrapper* ptr, const uint64_t solutionIndex)
+    {
+        if (ptr->m_lastSolutions != nullptr && solutionIndex < ptr->m_lastSolutions->size())
+        {
+            ptr->m_state = (*ptr->m_lastSolutions)[solutionIndex]->finalState();
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
 
@@ -222,9 +237,8 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
 
              if (queryCompiler->Compile(queryString))
              {
-                 shared_ptr<HtnPlanner::SolutionsType> solutions =
-                     ptr->m_planner->FindAllPlans(ptr->m_factory.get(), ptr->m_state, queryCompiler->result());
-                 *result = GetCharPtrFromString(HtnPlanner::ToStringSolutions(solutions, true));
+                 ptr->m_lastSolutions = ptr->m_planner->FindAllPlans(ptr->m_factory.get(), ptr->m_state, queryCompiler->result());
+                 *result = GetCharPtrFromString(HtnPlanner::ToStringSolutions(ptr->m_lastSolutions, true));
 
                  return nullptr;
              }

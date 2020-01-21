@@ -429,6 +429,7 @@ HtnGoalResolver::HtnGoalResolver()
     AddCustomRule("first", CustomRuleType({ CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleFirst, std::placeholders::_1)));
     AddCustomRule("forall", CustomRuleType({ CustomRuleArgType::ResolvedTerm, CustomRuleArgType::ResolvedTerm }, std::bind(&HtnGoalResolver::RuleForAll, std::placeholders::_1)));
     AddCustomRule("is", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::Arithmetic }, std::bind(&HtnGoalResolver::RuleIs, std::placeholders::_1)));
+    AddCustomRule("atomic", CustomRuleType({ CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleIsAtom, std::placeholders::_1)));
     AddCustomRule("max", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleAggregate, std::placeholders::_1)));
     AddCustomRule("min", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleAggregate, std::placeholders::_1)));
     AddCustomRule("nl", CustomRuleType({ }, std::bind(&HtnGoalResolver::RuleNewline, std::placeholders::_1)));
@@ -1501,6 +1502,53 @@ void HtnGoalResolver::RuleIs(ResolveState *state)
         default:
             StaticFailFastAssert(false);
             break;
+    }
+}
+
+// isAtom(term)
+void HtnGoalResolver::RuleIsAtom(ResolveState* state)
+{
+    shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
+    shared_ptr<HtnTerm> goal = currentNode->currentGoal();
+    shared_ptr<vector<shared_ptr<ResolveNode>>>& resolveStack = state->resolveStack;
+    HtnTermFactory* termFactory = state->termFactory;
+
+    switch (currentNode->continuePoint)
+    {
+    case ResolveContinuePoint::CustomStart:
+    {
+        // the "atom" operator accepts only one term
+        if (goal->arguments().size() != 1)
+        {
+            // Invalid program
+            Trace1("ERROR      ", "atom() must have one term:{0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
+            StaticFailFastAssertDesc(false, ("atom() must have one term: " + goal->ToString()).c_str());
+            currentNode->continuePoint = ResolveContinuePoint::ProgramError;
+        }
+        else
+        {
+            shared_ptr<HtnTerm> term = goal->arguments()[0];
+            if (term->isConstant())
+            {
+                // Rule resolves to true so no new terms, no unifiers got added since it was ground so no changes there
+                // Nothing to process on children so no special return handling
+                resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, {}, &(state->uniquifier)));
+                currentNode->continuePoint = ResolveContinuePoint::Return;
+            }
+            else
+            {
+                // Not an atom, therefore nothing down this branch can work and it fails
+                Trace1("FAIL       ", "not an atom {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
+                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                resolveStack->pop_back();
+            }
+        }
+    }
+    break;
+
+    default:
+        StaticFailFastAssert(false);
+        break;
     }
 }
 

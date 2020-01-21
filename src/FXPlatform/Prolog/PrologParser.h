@@ -59,7 +59,11 @@ namespace Prolog
 			<
 				CharacterSymbol<PercentString, FlattenType::None>,
 				ZeroOrMoreExpression<CharacterSetExceptSymbol<CrlfString>>,
-				OneOrMoreExpression<CharacterSetSymbol<CrlfString>>
+                OrExpression<Args
+                <
+    				OneOrMoreExpression<CharacterSetSymbol<CrlfString>>,
+                    EofSymbol
+                >>
 			>>,
 			AndExpression<Args
 			<

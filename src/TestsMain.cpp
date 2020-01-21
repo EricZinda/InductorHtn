@@ -1,4 +1,6 @@
 #include "FXPlatform/FailFast.h"
+#include "FXPlatform/SystemTraceType.h"
+#include "FXPlatform/NanoTrace.h"
 #include "UnitTest++/UnitTest++.h"
 #include "UnitTest++/TestReporterStdout.h"
 using namespace UnitTest;
@@ -11,9 +13,9 @@ class TestFilter
     {
         // Return true if the test matches the criteria for a test you want to run. Examples:
         // Just run this one test:
-//              return strcmp(test->m_details.testName, "PlannerOperatorTest") == 0;
+        //return strcmp(test->m_details.testName, "HtnGoalResolverAtomicTests") == 0;
         // Run just this suite of tests:
-//              return strcmp(test->m_details.suiteName, "HtnPlannerTests") == 0;
+        //return strcmp(test->m_details.suiteName, "HtnPlannerTests") == 0;
         
         // Return true to run everything
         return true;
@@ -24,6 +26,7 @@ int main (int argc, char *argv[])
 {
 	// Treat all FailFasts as exceptions when running tests so the process doesn't abort
 	TreatFailFastAsException(true);
+    SetTraceFilter((int)SystemTraceType::Solver | (int)SystemTraceType::Planner, TraceDetail::Diagnostic);
 
     TestReporterStdout reporter;
     TestRunner runner(reporter);

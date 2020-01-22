@@ -1107,7 +1107,7 @@ string HtnPlanner::ToStringSolution(shared_ptr<SolutionType> solution, bool json
     }
     else
     {
-        return HtnTerm::ToString(solution->first, true, json);
+        return HtnTerm::ToString(solution->first, json ? false : true, json);
     }
 }
 

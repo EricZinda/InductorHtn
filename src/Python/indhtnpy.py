@@ -7,6 +7,21 @@ def termArgs(term):
 def termName(term):
     return list(term)[0]
 
+def termIsConstant(term):
+    return len(termArgs(term)) == 0
+
+def termToString(term):
+    value = termName(term)
+    value += "("
+    hasArgs = False
+    for argTerm in termArgs(term):
+        if hasArgs:
+            value += ", "
+        value += termToString(argTerm)
+        hasArgs = True  
+    value += ")"
+    return value
+
 class HtnPlanner(object):
     def __init__(self, debug=False):
         # Load the library

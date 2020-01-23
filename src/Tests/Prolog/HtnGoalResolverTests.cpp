@@ -540,7 +540,7 @@ SUITE(HtnGoalResolverTests)
         // ***** Make sure string literals work
         compiler->Clear();
         testState = string() +
-        "goals( write(\"Test 'of the emergency'\") ).\r\n";
+        "goals( write('Test \"of the emergency\"') ).\r\n";
         CHECK(compiler->Compile(testState));
         
         // Redirect cout to catch output
@@ -551,7 +551,7 @@ SUITE(HtnGoalResolverTests)
         unifier = compiler->SolveGoals();
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
         CHECK_EQUAL(finalUnifier, "(())");
-        CHECK_EQUAL(out.str(), "Test 'of the emergency'");
+        CHECK_EQUAL(out.str(), "Test \"of the emergency\"");
         std::cout.rdbuf(coutbuf); //reset to standard output again
         
         // ***** Make sure nl works
@@ -576,7 +576,7 @@ SUITE(HtnGoalResolverTests)
         // ***** Make sure writeln works
         compiler->Clear();
         testState = string() +
-        "goals( writeln(\"test\") ).\r\n";
+        "goals( writeln('test') ).\r\n";
         CHECK(compiler->Compile(testState));
         
         // Redirect cout to catch output

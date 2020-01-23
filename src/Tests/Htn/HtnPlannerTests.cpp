@@ -9,7 +9,6 @@
 #include "Prolog/HtnGoalResolver.h"
 #include "FXPlatform/Htn/HtnCompiler.h"
 #include "FXPlatform/Htn/HtnPlanner.h"
-#include "FXPlatform/Htn/HtnParser.h"
 #include "FXPlatform/Prolog/HtnRuleSet.h"
 #include "FXPlatform/Prolog/HtnTerm.h"
 #include "FXPlatform/Prolog/HtnTermFactory.h"
@@ -17,7 +16,6 @@
 #include "Logger.h"
 #include <thread>
 #include "UnitTest++/UnitTest++.h"
-using namespace Htn;
 using namespace Prolog;
 
 SUITE(HtnPlannerTests)

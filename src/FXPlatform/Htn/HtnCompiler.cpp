@@ -10,11 +10,9 @@
 #include "HtnGoalResolver.h"
 #include "HtnMethod.h"
 #include "HtnOperator.h"
-#include "HtnParser.h"
 #include "HtnPlanner.h"
 #include "HtnRuleSet.h"
 #include "HtnTermFactory.h"
-using namespace Htn;
 
 void HtnCompiler::Clear()
 {

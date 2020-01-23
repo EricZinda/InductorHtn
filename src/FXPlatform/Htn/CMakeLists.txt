@@ -7,8 +7,6 @@ target_sources(lib
     HtnMethod.cpp
     HtnOperator.h    
     HtnOperator.cpp
-    HtnParser.h
-    HtnParser.cpp
     HtnPlanner.h
     HtnPlanner.cpp
 )

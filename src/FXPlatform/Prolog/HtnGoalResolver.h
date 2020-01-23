@@ -79,6 +79,7 @@ private:
     static void RuleAggregate(ResolveState *state);
 	static void RuleAssert(ResolveState* state);
     static void RuleAtomConcat(ResolveState* state);
+    static void RuleAtomDowncase(ResolveState* state);
     static void RuleCount(ResolveState *state);
     static void RuleDistinct(ResolveState *state);
     static void RuleFirst(ResolveState *state);

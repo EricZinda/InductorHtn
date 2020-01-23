@@ -485,7 +485,45 @@ SUITE(HtnGoalResolverTests)
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
         CHECK_EQUAL(finalUnifier, "((?Y = letter(?X), ?Z = capital(?X)))");
     }
-    
+   
+    TEST(HtnGoalResolverAtomDowncaseTests)
+    {
+        HtnGoalResolver resolver;
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        string testState;
+        string goals;
+        string finalUnifier;
+        shared_ptr<vector<UnifierType>> unifier;
+
+        //        SetTraceFilter((int) SystemTraceType::Planner | (int)SystemTraceType::Solver | (int) SystemTraceType::Unifier,  TraceDetail::Diagnostic);
+//        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
+
+        // ***** single downcase_atom() goal that succeeds
+        compiler->Clear();
+        testState = string() +
+            "goals(downcase_atom('THIS IS A TEST', ?x) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?x = this is a test))");
+
+        // ***** single downcase_atom() goal that is preceeded and succeeded by more goals to make sure unifiers flow through properly
+        compiler->Clear();
+        testState = string() +
+            "letter(C). letter(B). letter(A).\r\n" +
+            "capital(c). capital(b). capital(a).\r\n" +
+            "cost(c, 1). cost(ab, 2). cost(a, 3).\r\n" +
+            "highCost(3).\r\n" +
+            "trace(?x) :- .\r\n"
+            "goals( letter(?X), downcase_atom(?X, ?Y), cost(?Y, ?Cost) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = C, ?Y = c, ?Cost = 1), (?X = A, ?Y = a, ?Cost = 3))");
+    }
+
     TEST(HtnGoalResolverAtomConcatTests)
     {
         HtnGoalResolver resolver;

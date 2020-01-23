@@ -78,6 +78,7 @@ private:
     static std::vector<std::shared_ptr<HtnTerm>> ReplaceDontCareVariables(HtnTermFactory *termFactory, const std::vector<std::shared_ptr<HtnTerm>> &initialGoals);
     static void RuleAggregate(ResolveState *state);
 	static void RuleAssert(ResolveState* state);
+    static void RuleAtomConcat(ResolveState* state);
     static void RuleCount(ResolveState *state);
     static void RuleDistinct(ResolveState *state);
     static void RuleFirst(ResolveState *state);

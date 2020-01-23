@@ -1121,16 +1121,18 @@ string HtnPlanner::ToStringSolutions(shared_ptr<SolutionsType> solutions, bool j
     {
         stringstream result;
         result << "[ ";
+        bool hasSolution = false;
         for(shared_ptr<SolutionType> solution : *solutions)
         {
             if (json)
             {
-                result << "[ " + ToStringSolution(solution, true) + " ] ";
+                result << (hasSolution ? "," : "") << "[ " + ToStringSolution(solution, true) + " ] ";
             }
             else
             {
                 result << "{ " + ToStringSolution(solution) + " } ";
             }
+            hasSolution = true;
         }
         result << "]";
         

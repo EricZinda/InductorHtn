@@ -424,7 +424,8 @@ shared_ptr<UnifierType> ResolveState::SimplifySolution(const UnifierType &soluti
 HtnGoalResolver::HtnGoalResolver()
 {
     AddCustomRule("assert", CustomRuleType({ CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleAssert, std::placeholders::_1)));
-	AddCustomRule("count", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleCount, std::placeholders::_1)));
+    AddCustomRule("atom_concat", CustomRuleType({ CustomRuleArgType::ResolvedTerm, CustomRuleArgType::ResolvedTerm, CustomRuleArgType::Variable }, std::bind(&HtnGoalResolver::RuleAtomConcat, std::placeholders::_1)));
+    AddCustomRule("count", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleCount, std::placeholders::_1)));
     AddCustomRule("distinct", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleDistinct, std::placeholders::_1)));
     AddCustomRule("first", CustomRuleType({ CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleFirst, std::placeholders::_1)));
     AddCustomRule("forall", CustomRuleType({ CustomRuleArgType::ResolvedTerm, CustomRuleArgType::ResolvedTerm }, std::bind(&HtnGoalResolver::RuleForAll, std::placeholders::_1)));
@@ -1146,6 +1147,62 @@ void HtnGoalResolver::RuleAssert(ResolveState* state)
 			StaticFailFastAssert(false);
 			break;
 	}
+}
+
+// atom_concat(a, b, ?ab)
+void HtnGoalResolver::RuleAtomConcat(ResolveState* state)
+{
+    shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
+    shared_ptr<HtnTerm> goal = currentNode->currentGoal();
+    shared_ptr<vector<shared_ptr<ResolveNode>>>& resolveStack = state->resolveStack;
+    HtnTermFactory* termFactory = state->termFactory;
+
+    switch (currentNode->continuePoint)
+    {
+    case ResolveContinuePoint::CustomStart:
+    {
+        // the "aatom_concattom" operator accepts only three term
+        if (goal->arguments().size() != 3 || !goal->arguments()[0]->isConstant() || !goal->arguments()[1]->isConstant() || !goal->arguments()[2]->isVariable())
+        {
+            // Invalid program
+            Trace1("ERROR      ", "atom_concat() must have three terms, first two as constants and the last as variable:{0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
+            StaticFailFastAssertDesc(false, ("atom_concat() must have three terms, first two as constants and the last as variable: " + goal->ToString()).c_str());
+            currentNode->continuePoint = ResolveContinuePoint::ProgramError;
+        }
+        else
+        {
+            shared_ptr<HtnTerm> term1 = goal->arguments()[0];
+            shared_ptr<HtnTerm> term2 = goal->arguments()[1];
+            shared_ptr<HtnTerm> termResult = goal->arguments()[2];
+
+            shared_ptr<HtnTerm> concatAtom = termFactory->CreateConstant(term1->name() + term2->name());
+
+            // Just unify the two arguments
+            shared_ptr<UnifierType> result = Unify(termFactory, goal->arguments()[2], concatAtom);
+            if (result == nullptr)
+            {
+                // There were no solutions: fail!
+                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                resolveStack->pop_back();
+            }
+            else
+            {
+                // success! Treat this node as though it unified with a rule that resolved to true.
+                // Just like if we unified with a normal rule, we continue the depth first search skipping the current goal
+                // The unifiers we found get added to the list of unifiers
+                // No new goals were added since it just resolved to "true"
+                Trace1("           ", "atom_concat() rule succeeded, new unification: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, ToString(*result));
+                resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, { *result }, &(state->uniquifier)));
+                currentNode->continuePoint = ResolveContinuePoint::Return;
+            }
+        }
+    }
+    break;
+
+    default:
+        StaticFailFastAssert(false);
+        break;
+    }
 }
 
 // Count will evaluate ALL of the potential resolutions and then only return the Number of them, if it fails the count is zero and count will NOT fail

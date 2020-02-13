@@ -13,6 +13,8 @@
 #include "HtnRuleSet.h"
 #include "HtnTerm.h"
 #include "HtnTermFactory.h"
+#include <cctype>
+#include <cwctype>
 #include <stack>
 #include <locale> 
 const int indentSpaces = 11;
@@ -1177,7 +1179,7 @@ void HtnGoalResolver::RuleAtomDowncase(ResolveState* state)
             std::locale loc;
             std::string lowercase = term1->name();
             std::transform(lowercase.begin(), lowercase.end(), lowercase.begin(),
-                [&](unsigned char c) { return std::tolower(c, loc); });
+                [&](char c) { return std::tolower(c, loc); });
             shared_ptr<HtnTerm> resultAtom = termFactory->CreateConstant(lowercase);
 
             // Just unify the two arguments

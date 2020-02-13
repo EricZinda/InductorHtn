@@ -1,5 +1,6 @@
 import sys, platform
 import ctypes, ctypes.util
+from sys import platform
 
 def termArgs(term):
     return list(term.values())[0]
@@ -25,7 +26,18 @@ def termToString(term):
 class HtnPlanner(object):
     def __init__(self, debug=False):
         # Load the library
-        indhtnPath = ctypes.util.find_library("./indhtnpy")
+        if platform == "linux" or platform == "linux2" or platform == "darwin":
+            # linux
+            # OS X
+            libname = "libindhtnpy.dylib"
+        elif platform == "win32":
+            # Windows...
+            libname = "./indhtnpy"
+        else:   
+            print("Unknown OS: {}".format(platform))
+            sys.exit()
+
+        indhtnPath = ctypes.util.find_library(libname)
         if not indhtnPath:
             print("Unable to find the indhtnpy library, please make sure it is on your path.")
             sys.exit()

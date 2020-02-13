@@ -1,10 +1,10 @@
-using namespace std;
 #include <memory>
 #include <new> //For std::nothrow
 #include <stdio.h>
 #include "FXPlatform/Htn/HtnCompiler.h"
 #include "FXPlatform/Htn/HtnPlanner.h"
 #include "FXPlatform/Prolog/PrologQueryCompiler.h"
+using namespace std;
 // https://solarianprogrammer.com/2019/07/18/python-using-c-cpp-libraries-ctypes/
 // https://dbader.org/blog/python-ctypes-tutorial
 // http://svn.python.org/projects/ctypes/trunk/ctypes/docs/manual/tutorial.html#pointers
@@ -57,6 +57,17 @@ public:
     shared_ptr<HtnGoalResolver> m_resolver;
     shared_ptr<HtnRuleSet> m_state;
 };
+
+#if defined(_MSC_VER)
+    #define __declspec(x) __declspec(x)
+    #define __stdcall __stdcall
+#else
+    #if defined(__GNUC__)
+        #define __declspec(x)
+        #define __stdcall
+        #define _strdup strdup
+    #endif
+#endif
 
 extern "C"  //Tells the compile to use C-linkage for the next scope.
 {

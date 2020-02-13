@@ -39,7 +39,7 @@ The [Inductor HTN Example](https://blog.inductorsoftware.com/blog/inductorhtnexa
 The Python interface to InductorHtn is a single class called HtnPlanner with a few simple methods. It works with Python 3.x and uses the CTypes interface for calling the C++ implementation, which should be included with most Pythons.
 
 There are only two files you need to use it: 
-1. indhtnpy.dll. This gets built as part of your build. It needs to be on your system path so Python can find it. 
+1. indhtnpy.dll (Windows) or libindhtnpy.dylib (Mac). This gets built as part of your build. It needs to be on your system path so Python can find it. 
 2. indhtnpy.py. This is the Python interface to the DLL. It needs to be included with your Python program, whereever that is.
 
 Here is the content of PythonUsage.py which describes the entire interface:

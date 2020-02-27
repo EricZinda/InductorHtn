@@ -9,6 +9,7 @@ using namespace std;
 // https://dbader.org/blog/python-ctypes-tutorial
 // http://svn.python.org/projects/ctypes/trunk/ctypes/docs/manual/tutorial.html#pointers
 
+const int defaultMemoryBudget = 1000000;
 class HtnPlannerPythonWrapper
 {
 public:
@@ -192,6 +193,8 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
         }
     }
 
+    // returns result in Json format
+    // if the query failed, it will be a False term
     __declspec(dllexport) char* __stdcall StandardPrologQuery(HtnPlannerPythonWrapper* ptr, char* queryChars, char** result)
     {
         // Catch any FailFasts and return their description
@@ -207,10 +210,28 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
             if (queryCompiler->Compile(queryString))
             {
                 // The resolver can give one answer at a time using ResolveNext(), or just get them all using ResolveAll()
-                shared_ptr<vector<UnifierType>> queryResult = ptr->m_resolver->ResolveAll(ptr->m_factory.get(), ptr->m_state.get(), queryCompiler->result());
+                int64_t highestMemoryUsedReturn;
+                int furthestFailureIndex;
+                std::vector<std::shared_ptr<HtnTerm>> farthestFailureContext;
+                shared_ptr<vector<UnifierType>> queryResult = ptr->m_resolver->ResolveAll(ptr->m_factory.get(), ptr->m_state.get(), queryCompiler->result(),
+                                                                                          0,
+                                                                                          defaultMemoryBudget,
+                                                                                          &highestMemoryUsedReturn,
+                                                                                          &furthestFailureIndex,
+                                                                                          &farthestFailureContext);
                 if (queryResult == nullptr)
                 {
-                    *result = GetCharPtrFromString("{\"False\" :[]}");
+                    string failureContextString;
+                    if(farthestFailureContext.size() > 0)
+                    {
+                        std::vector<std::shared_ptr<HtnTerm>> contextResult;
+                        for(int index = 1; index < farthestFailureContext.size(); ++index)
+                        {
+                            contextResult.push_back(farthestFailureContext[index]);
+                        }
+                        failureContextString = ", " + HtnTerm::ToString(contextResult, false, true);
+                    }
+                    *result = GetCharPtrFromString("[{\"False\" :[]}, {\"failureIndex\" :[{\"" + lexical_cast<string>(furthestFailureIndex) + "\" :[]}]}" + failureContextString + "]");
                 }
                 else
                 {

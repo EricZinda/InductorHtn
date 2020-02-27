@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD 11)
 
 add_executable(runtests TestsMain.cpp)
 add_library(testLib "")
+add_custom_command(TARGET runtests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_SOURCE_DIR}/Tests/Htn/DataFiles"
+        $<TARGET_FILE_DIR:runtests>)
 
 add_executable(indhtn main.cpp)
 add_library(lib "")

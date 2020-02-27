@@ -6,6 +6,7 @@
 //  Copyright © 2018 Eric Zinda. All rights reserved.
 //
 #include <iostream>
+#include "FXPlatform/FileStream.h"
 #include "FXPlatform/Prolog/HtnGoalResolver.h"
 #include "FXPlatform/Prolog/HtnRuleSet.h"
 #include "FXPlatform/Prolog/HtnTerm.h"
@@ -70,6 +71,102 @@ bool CheckSolutions(vector<UnifierType> solution, vector<UnifierType> expectedSo
 
 SUITE(HtnGoalResolverTests)
 {
+    TEST(AdventureScenarioTests)
+    {
+        HtnGoalResolver resolver;
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologStandardCompiler> compiler = shared_ptr<PrologStandardCompiler>(new PrologStandardCompiler(factory.get(), state.get()));
+        shared_ptr<vector<UnifierType>> unifier;
+        string testState;
+        string sharedState;
+        string goals;
+        string finalUnifier;
+        string example;
+        int furthestFailureIndex;
+        std::vector<std::shared_ptr<HtnTerm>> farthestFailureContext;
+
+        FileStream stream;
+        stream.Open("Adventure.pl", OpenExisting, Read);
+        example = stream.ReadAll();
+        testState = "";
+
+        compiler->Clear();
+        goals = "goals(=(CreateOrEval, create), =(E9001, id9007), d_thing(X9002), d_pronoun(you, X9003), d_see_v_1(E9001, X9003, X9002, CreateOrEval)).";
+        CHECK(compiler->Compile(example + sharedState + testState + goals));
+        unifier = compiler->SolveGoals(&resolver, 1000000, nullptr, &furthestFailureIndex, &farthestFailureContext);
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?CreateOrEval = create, ?E9001 = id9007, ?X9002 = diamond1, ?X9003 = player))");
+        CHECK_EQUAL(0, furthestFailureIndex);
+        CHECK_EQUAL(0, farthestFailureContext.size());
+    }
+    
+    TEST(GoalResolverFailureContextTest)
+    {
+        HtnGoalResolver resolver;
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        shared_ptr<vector<UnifierType>> unifier;
+        string testState;
+        string sharedState;
+        string goals;
+        string finalUnifier;
+        string example;
+        int furthestFailureIndex;
+        std::vector<std::shared_ptr<HtnTerm>> farthestFailureContext;
+
+        example =
+            "test(?X) :- tile(?X, 1)."
+            "test2(?X) :- failureContext(1, foo), tile(?X, 1)."
+            "test3(?X) :- failureContext(1, foo), tile(0, 1), failureContext(2, foo2), tile(?X, 1)."
+            ;
+        testState = "tile(0,0). tile(0,1). \r\n";
+
+        // If there is no use of FailureContext, nothing is returned but index still works
+        compiler->Clear();
+        goals = "goals(test(0), test(1)).";
+        CHECK(compiler->Compile(example + sharedState + testState + goals));
+        unifier = compiler->SolveGoals(&resolver, 1000000, nullptr, &furthestFailureIndex, &farthestFailureContext);
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "null");
+        CHECK_EQUAL(1, furthestFailureIndex);
+        CHECK_EQUAL(0, farthestFailureContext.size());
+
+        // FailureContext is returned if used
+        compiler->Clear();
+        goals = "goals(test2(0), test2(1)).";
+        CHECK(compiler->Compile(example + sharedState + testState + goals));
+        unifier = compiler->SolveGoals(&resolver, 1000000, nullptr, &furthestFailureIndex, &farthestFailureContext);
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "null");
+        CHECK_EQUAL(1, furthestFailureIndex);
+        CHECK_EQUAL(2, farthestFailureContext.size());
+        CHECK_EQUAL("{\"1\":[]}, {\"foo\":[]}", HtnTerm::ToString(farthestFailureContext, false, true));
+        
+        // The highest FailureContext is returned in a function
+        compiler->Clear();
+        goals = "goals(test3(0), test3(1)).";
+        CHECK(compiler->Compile(example + sharedState + testState + goals));
+        unifier = compiler->SolveGoals(&resolver, 1000000, nullptr, &furthestFailureIndex, &farthestFailureContext);
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "null");
+        CHECK_EQUAL(1, furthestFailureIndex);
+        CHECK_EQUAL(2, farthestFailureContext.size());
+        CHECK_EQUAL("{\"2\":[]}, {\"foo2\":[]}", HtnTerm::ToString(farthestFailureContext, false, true));
+
+        // FailureContext is still active if it isn't cleared
+        compiler->Clear();
+        goals = "goals(test3(0), test3(0), test(1)).";
+        CHECK(compiler->Compile(example + sharedState + testState + goals));
+        unifier = compiler->SolveGoals(&resolver, 1000000, nullptr, &furthestFailureIndex, &farthestFailureContext);
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL("null", finalUnifier);
+        CHECK_EQUAL(2, furthestFailureIndex);
+        CHECK_EQUAL(2, farthestFailureContext.size());
+        CHECK_EQUAL("{\"2\":[]}, {\"foo2\":[]}", HtnTerm::ToString(farthestFailureContext, false, true));
+    }
+    
     TEST(HtnGoalResolverSquareScenarioTest)
     {
         //SetTraceFilter((int) SystemTraceType::Solver | (int) SystemTraceType::System, TraceDetail::Diagnostic);

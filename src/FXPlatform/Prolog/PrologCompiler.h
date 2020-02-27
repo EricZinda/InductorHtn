@@ -56,9 +56,9 @@ public:
         return resolver.ResolveAll(m_termFactory, m_state, m_goals);
     }
 
-    shared_ptr<vector<UnifierType>> SolveGoals(HtnGoalResolver *resolver, int memoryBudget = 1000000)
+    shared_ptr<vector<UnifierType>> SolveGoals(HtnGoalResolver *resolver, int memoryBudget = 1000000, int64_t *highestMemoryUsedReturn = nullptr, int *furthestFailureIndex = nullptr, std::vector<std::shared_ptr<HtnTerm>> *farthestFailureContext = nullptr)
     {
-        return resolver->ResolveAll(m_termFactory, m_state, m_goals, 0, memoryBudget);
+        return resolver->ResolveAll(m_termFactory, m_state, m_goals, 0, memoryBudget, highestMemoryUsedReturn, furthestFailureIndex, farthestFailureContext);
     }
 
     static shared_ptr<HtnTerm> CreateTermFromFunctor(HtnTermFactory *factory, shared_ptr<Symbol> functor)

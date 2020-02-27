@@ -53,6 +53,16 @@ TraceString6("HtnGoalResolver::Resolve " + string((indent) * indentSpaces, ' ') 
 SystemTraceType::Solver, (fullTrace ? TraceDetail::Normal :TraceDetail::Diagnostic), \
 arg1, arg2, arg3, arg4, arg5, arg6);
 
+#define Trace7(status, trace, indent, fullTrace, arg1, arg2, arg3, arg4, arg5, arg6, arg7) \
+TraceString7("HtnGoalResolver::Resolve " + string((indent) * indentSpaces, ' ') + status + trace, \
+SystemTraceType::Solver, (fullTrace ? TraceDetail::Normal :TraceDetail::Diagnostic), \
+arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+
+#define Trace8(status, trace, indent, fullTrace, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) \
+TraceString8("HtnGoalResolver::Resolve " + string((indent) * indentSpaces, ' ') + status + trace, \
+SystemTraceType::Solver, (fullTrace ? TraceDetail::Normal :TraceDetail::Diagnostic), \
+arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+
 ResolveNode::ResolveNode(shared_ptr<vector<shared_ptr<HtnTerm>>> resolventArg, shared_ptr<UnifierType> unifierArg) :
     continuePoint(ResolveContinuePoint::NextGoal),
     currentRuleIndex(-1),
@@ -292,6 +302,7 @@ ResolveState::ResolveState(HtnTermFactory *termFactoryArg, HtnRuleSet *progArg, 
     collectAllSolutions(false),
     deepestFailure(-1),
     deepestFailureOriginalGoalIndex(-1),
+    farthestFailureOriginalGoalIndex(-1),
     fullTrace(false),
     highestMemoryUsed(0),
     initialGoals(shared_ptr<vector<shared_ptr<HtnTerm>>>(new vector<shared_ptr<HtnTerm>>(initialResolventArg))),
@@ -344,6 +355,19 @@ void ResolveState::RecordFailure(shared_ptr<HtnTerm> goal, int goalsLeftToProces
     
     shared_ptr<HtnTerm> originalGoalInProgress = (*initialGoals)[originalGoalIndex];
     int size = (int) resolveStack->size();
+    
+    // Replace the context if we've gotten to a new original goal OR
+    // If we've gotten farther along in the current original goal since that will be a better error
+    if(
+       (originalGoalIndex > farthestFailureOriginalGoalIndex) ||
+        ((originalGoalIndex == farthestFailureOriginalGoalIndex) &&
+         ((farthestFailureContext.size() == 0) || (currentFailureContext[0]->TermCompare(*farthestFailureContext[0].get()) > 0))))
+    {
+        farthestFailureOriginalGoalIndex = originalGoalIndex;
+        farthestFailureContext = currentFailureContext;
+        Trace1("           ", "RecordFailure Context:  {0}", initialIndent + resolveStack->size(), fullTrace, HtnTerm::ToString(currentFailureContext));
+    }
+    
     if((originalGoalIndex != deepestFailureOriginalGoalIndex) || ((size >= deepestFailure) && (goal != nullptr)))
     {
         deepestFailure = size;
@@ -430,6 +454,7 @@ HtnGoalResolver::HtnGoalResolver()
     AddCustomRule("downcase_atom", CustomRuleType({ CustomRuleArgType::ResolvedTerm, CustomRuleArgType::Variable }, std::bind(&HtnGoalResolver::RuleAtomDowncase, std::placeholders::_1)));
     AddCustomRule("count", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleCount, std::placeholders::_1)));
     AddCustomRule("distinct", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleDistinct, std::placeholders::_1)));
+    AddCustomRule("failureContext", CustomRuleType({ CustomRuleArgType::SetOfTerms }, std::bind(&HtnGoalResolver::RuleFailureContext, std::placeholders::_1)));
     AddCustomRule("first", CustomRuleType({ CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleFirst, std::placeholders::_1)));
     AddCustomRule("forall", CustomRuleType({ CustomRuleArgType::ResolvedTerm, CustomRuleArgType::ResolvedTerm }, std::bind(&HtnGoalResolver::RuleForAll, std::placeholders::_1)));
     AddCustomRule("is", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::Arithmetic }, std::bind(&HtnGoalResolver::RuleIs, std::placeholders::_1)));
@@ -668,7 +693,7 @@ vector<shared_ptr<HtnTerm>> HtnGoalResolver::ReplaceDontCareVariables(HtnTermFac
 // returns null if no solution
 // returns a single empty UnifierType for "true" solution
 // otherwise returns an array of UnifierTypes for all the solutions
-shared_ptr<vector<UnifierType>> HtnGoalResolver::ResolveAll(HtnTermFactory *termFactory, HtnRuleSet *prog, const vector<shared_ptr<HtnTerm>> &initialGoals, int initialIndent, int memoryBudget, int64_t *highestMemoryUsedReturn)
+shared_ptr<vector<UnifierType>> HtnGoalResolver::ResolveAll(HtnTermFactory *termFactory, HtnRuleSet *prog, const vector<shared_ptr<HtnTerm>> &initialGoals, int initialIndent, int memoryBudget, int64_t *highestMemoryUsedReturn, int *furthestFailureIndex, std::vector<std::shared_ptr<HtnTerm>> *farthestFailureContext)
 {
     Trace3("ALL BEGIN  ", "goals:{0}, termStrings:{1}, termOther:{2}", initialIndent, false, HtnTerm::ToString(initialGoals), termFactory->stringSize(), termFactory->otherAllocationSize());
 
@@ -702,9 +727,25 @@ shared_ptr<vector<UnifierType>> HtnGoalResolver::ResolveAll(HtnTermFactory *term
     if(solutions->size() == 0)
     {
         // Always report a failure if there were no solutions
-        Trace6("FAIL       ", "Failed to resolve initialGoal:{0}, failed at:{1}, stack:{5}, InitialGoals:{2}, termStrings:{3}, termOther:{4}", initialIndent, true,
+        if(furthestFailureIndex != nullptr)
+        {
+            *furthestFailureIndex = state->farthestFailureOriginalGoalIndex;
+        }
+        
+        if(farthestFailureContext != nullptr)
+        {
+            *farthestFailureContext = state->farthestFailureContext;
+        }
+        
+        Trace8("FAIL       ", "Failed to resolve initialGoal:{0}, \r\nfarthest initial goal:{6}, context:{7}, \r\ndeepest failure:{1}, stack:{5}, InitialGoals:{2}, termStrings:{3}, termOther:{4}", initialIndent, true,
                state->deepestFailureOriginalGoalIndex >= 0 ? initialGoals[state->deepestFailureOriginalGoalIndex]->ToString() : "",
-               state->deepestFailureGoal != nullptr ? state->deepestFailureGoal->ToString() : "", HtnTerm::ToString(initialGoals), termFactory->stringSize(), termFactory->otherAllocationSize(), state->deepestFailureStack);
+               state->deepestFailureGoal != nullptr ? state->deepestFailureGoal->ToString() : "",
+               HtnTerm::ToString(initialGoals),
+               termFactory->stringSize(),
+               termFactory->otherAllocationSize(),
+               state->deepestFailureStack,
+               state->farthestFailureOriginalGoalIndex >= 0 ? initialGoals[state->farthestFailureOriginalGoalIndex]->ToString() : "",
+               HtnTerm::ToString(state->farthestFailureContext));
     }
     
     // Get a read on memory after we release state which is what it will look like when we return
@@ -1432,6 +1473,56 @@ void HtnGoalResolver::RuleDistinct(ResolveState *state)
             currentNode->PopStandaloneResolve(state);
         }
             break;
+            
+        default:
+            StaticFailFastAssert(false);
+            break;
+    }
+}
+
+// failureContext is a way to report *why* something failed back to the user
+// it operates under the premise that, of all the failures that may have occurred in resolving
+// a set of terms, the one that got the farthest into the list of initial terms, and the deepest
+// (in the stack) for that term is probably the most interesting failure to report
+// It works very well as a heursitic.
+//
+// the failureContext associated with a failure will be returned from ResolveAll()
+//
+// failureContext/n is a predicate that stores away a set of terms if this execution point
+// is the farthest point the resolver has gotten in the list of initial goals, or is equivalent
+// to the farthest in the list, but has a larger ?Order.
+// failureContext(?Order, ?SetOfTerms...)
+void HtnGoalResolver::RuleFailureContext(ResolveState *state)
+{
+    shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
+    shared_ptr<HtnTerm> goal = currentNode->currentGoal();
+    shared_ptr<vector<shared_ptr<ResolveNode>>> &resolveStack = state->resolveStack;
+    HtnTermFactory *termFactory = state->termFactory;
+    
+    switch(currentNode->continuePoint)
+    {
+        case ResolveContinuePoint::CustomStart:
+        {
+            if(goal->arguments().size() == 0 || goal->arguments()[0]->isVariable())
+            {
+                // Invalid program
+                Trace1("ERROR      ", "failureContext(?Order, ?SetOfTerms...) must have at least one term where the first is not a variable: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
+                StaticFailFastAssertDesc(false, ("failureContext(?Order, ?SetOfTerms...) must have at least one term where the first is not a variable: " + goal->ToString()).c_str());
+                currentNode->continuePoint = ResolveContinuePoint::ProgramError;
+            }
+            else
+            {
+                // Remember the failure context in case this is the deepest failure
+                Trace1("           ", "failureContext() succeeded:  {0}", state->initialIndent + resolveStack->size(), state->fullTrace, HtnTerm::ToString(goal->arguments()));
+                state->currentFailureContext = goal->arguments();
+
+                // Rule resolves to true so no new terms, no unifiers got added since it was ground so no changes there
+                // Nothing to process on children so no special return handling
+                resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, {}, &(state->uniquifier)));
+                currentNode->continuePoint = ResolveContinuePoint::Return;
+            }
+        }
+        break;
             
         default:
             StaticFailFastAssert(false);

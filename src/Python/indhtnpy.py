@@ -11,6 +11,12 @@ def termName(term):
 def termIsConstant(term):
     return len(termArgs(term)) == 0
 
+def termListToString(termList):
+    termStringList = []
+    for term in termList:
+        termStringList.append(termToString(term))
+    return ",".join(termStringList)
+
 def termToString(term):
     value = termName(term)
     value += "("

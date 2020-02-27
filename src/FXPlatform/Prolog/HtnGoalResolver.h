@@ -64,7 +64,7 @@ public:
     static bool IsGround(UnifierType *unifier);
     bool GetCustomRule(const std::string &name, int arity, HtnGoalResolver::CustomRuleType &metadata);
     // Always check factory->outOfMemory() after calling to see if we ran out of memory during processing and the resolutions might not be complete
-    std::shared_ptr<std::vector<UnifierType>> ResolveAll(HtnTermFactory *termFactory, HtnRuleSet *prog, const std::vector<std::shared_ptr<HtnTerm>> &initialGoals, int initialIndent = 0, int memoryBudget = 1000000, int64_t *highestMemoryUsedReturn = nullptr);
+    std::shared_ptr<std::vector<UnifierType>> ResolveAll(HtnTermFactory *termFactory, HtnRuleSet *prog, const std::vector<std::shared_ptr<HtnTerm>> &initialGoals, int initialIndent = 0, int memoryBudget = 1000000, int64_t *highestMemoryUsedReturn = nullptr, int *furthestFailureIndex = nullptr, std::vector<std::shared_ptr<HtnTerm>> *farthestFailureContext = nullptr);
     // Always check factory->outOfMemory() after calling to see if we ran out of memory during processing and the resolutions might not be complete
     std::shared_ptr<UnifierType> ResolveNext(ResolveState *state);
     static std::shared_ptr<HtnTerm> SubstituteUnifiers(HtnTermFactory *factory, const UnifierType &source, std::shared_ptr<HtnTerm> target);
@@ -82,6 +82,7 @@ private:
     static void RuleAtomDowncase(ResolveState* state);
     static void RuleCount(ResolveState *state);
     static void RuleDistinct(ResolveState *state);
+    static void RuleFailureContext(ResolveState *state);
     static void RuleFirst(ResolveState *state);
     static void RuleForAll(ResolveState *state);
     static void RuleIs(ResolveState *state);
@@ -251,6 +252,9 @@ public:
         deepestFailure = -1;
         deepestFailureGoal = nullptr;
         deepestFailureOriginalGoalIndex = -1;
+        farthestFailureOriginalGoalIndex = -1;
+        currentFailureContext.clear();
+        farthestFailureContext.clear();
     }
     std::string GetStackString();
     int64_t RecordMemoryUsage(int64_t &initialTermMemory, int64_t &initialRuleSetMemory);
@@ -274,6 +278,8 @@ public:
         
         return sizeof(ResolveState) +
             deepestFailureStack.size() + highestMemoryUsedStack.size() +
+            farthestFailureContext.size() * sizeof(std::shared_ptr<HtnTerm>) +
+            currentFailureContext.size() * sizeof(std::shared_ptr<HtnTerm>) +
             initialGoals->size() * sizeof(std::shared_ptr<HtnTerm>) +
             stackSize +
             (solutions == nullptr ? 0 : (sizeof(std::vector<UnifierType>) + solutions->size() * sizeof(UnifierItemType)));
@@ -284,6 +290,9 @@ public:
     int deepestFailure;
     std::shared_ptr<HtnTerm> deepestFailureGoal;
     int deepestFailureOriginalGoalIndex;
+    int farthestFailureOriginalGoalIndex;
+    std::vector<std::shared_ptr<HtnTerm>> farthestFailureContext;
+    std::vector<std::shared_ptr<HtnTerm>> currentFailureContext;
     std::string deepestFailureStack;
     bool fullTrace;
     int64_t highestMemoryUsed;

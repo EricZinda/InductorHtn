@@ -26,7 +26,8 @@ int main (int argc, char *argv[])
 {
 	// Treat all FailFasts as exceptions when running tests so the process doesn't abort
 	TreatFailFastAsException(true);
-    SetTraceFilter((int)SystemTraceType::Solver | (int)SystemTraceType::Planner, TraceDetail::Diagnostic);
+    SetTraceFilter((int)SystemTraceType::None, TraceDetail::Normal);
+//    SetTraceFilter((int)SystemTraceType::Solver | (int)SystemTraceType::Planner, TraceDetail::Diagnostic);
 
     TestReporterStdout reporter;
     TestRunner runner(reporter);

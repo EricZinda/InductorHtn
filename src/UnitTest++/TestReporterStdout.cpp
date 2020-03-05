@@ -31,7 +31,7 @@ void TestReporterStdout::ReportSummary(int const totalTestCount, int const faile
 	using namespace std;
 
     if (failureCount > 0)
-        printf("FAILURE: %d out of %d tests failed (%d failures).\n", failedTestCount, totalTestCount, failureCount);
+        printf("FAILURE: %d out of %d tests failed (%d failures). search for \"error: Failure in\" to find the error\n", failedTestCount, totalTestCount, failureCount);
     else
         printf("Success: %d tests passed.\n", totalTestCount);
 

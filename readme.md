@@ -17,13 +17,15 @@ indhtn is designed to be built with [CMake](https://cmake.org) like this:
 	unix and win: `cd build`
 4. CMake can build different types of projects using "generators".  Run `cmake -help` to get a list of generators on your system:
 	unix and win: `cmake -help`
-4. Pick the generator that will create the type of project you want and use the `-G` option to choose it. Here are the ones that have been tested:
+5. Pick the generator that will create the type of project you want and use the `-G` option to choose it. Here are the ones that have been tested:
 	Mac make file: 			`cmake -G "Unix Makefiles" ../src`
 	Mac Xcode:	 			`cmake -G "Xcode" ../src`
 	Windows Visual Studio: 	`cmake -G "Visual Studio 16 2019" ../src`
-5. Then actually do the build using this command which magically builds whatever you choose on the command line: 
-	`cmake --build ./`
-5a. OR you can manually use the build system that got created by cmake:
+6. Then actually do the build using this command which magically builds whatever you choose on the command line: 
+	`cmake --build ./ --config Release`
+	or
+	`cmake --build ./ --config Debug`
+7. OR you can manually use the build system that got created by cmake:
 	unix or mac make file: 	`make`
 	Mac Xcode:				Open the IndProlog.xcodeproj file in the build directory using Xcode.
 	Windows Visual Studio: 	Open the .sln file in the build directory using VS.

@@ -70,9 +70,14 @@ class HtnPlanner(object):
         self.indhtnLib.HtnQuery.restype = ctypes.POINTER(ctypes.c_char)
         self.indhtnLib.StandardPrologQuery.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_char))]
         self.indhtnLib.StandardPrologQuery.restype = ctypes.POINTER(ctypes.c_char)
+        self.indhtnLib.SetDebugTracing.argtypes = [ctypes.c_int64]
 
         # Now create an instance of the object
         self.obj = self.indhtnLib.CreateHtnPlanner(debug)
+
+    # debug = True to enable debug tracing, False to turn off
+    def SetDebugTracing(self, debug):
+        self.indhtnLib.SetDebugTracing(debug)
 
     # Returns true if the index is in range, false otherwise
     def ApplySolution(self, index):

@@ -93,6 +93,18 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
         operator delete(ptr, std::nothrow);
     }
 
+    __declspec(dllexport) void __stdcall SetDebugTracing(bool debug)
+    {
+        if (debug)
+        {
+            SetTraceFilter((int)SystemTraceType::Solver | (int)SystemTraceType::Planner, TraceDetail::Diagnostic);
+        }
+        else
+        {
+            SetTraceFilter(SystemTraceType::None, TraceDetail::Normal);
+        }
+    }
+
     // Compile *adds* whatever is passed into the current state of the database
     __declspec(dllexport) char* __stdcall PrologCompile(HtnPlannerPythonWrapper* ptr, const char* data)
     {

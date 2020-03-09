@@ -36,7 +36,7 @@ If you're using a command line generator of some sort, just change to the direct
 
 To run the Python tests:
 1. Make sure Python 3.x is on your path
-2. Make sure the indhtnpy.dll that gets built is on your path
+2. Make sure the indhtnpy.dll (or libindhtnpy.dylib on the mac) that gets built is on your path
 	- On windows check or set your PATH variable, 
 	- On the mac, I found it easiest to put it into usr/local/lib
 3. Get to the /src/Python directory

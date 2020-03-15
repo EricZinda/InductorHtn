@@ -236,12 +236,7 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
                     string failureContextString;
                     if(farthestFailureContext.size() > 0)
                     {
-                        std::vector<std::shared_ptr<HtnTerm>> contextResult;
-                        for(int index = 1; index < farthestFailureContext.size(); ++index)
-                        {
-                            contextResult.push_back(farthestFailureContext[index]);
-                        }
-                        failureContextString = ", " + HtnTerm::ToString(contextResult, false, true);
+                        failureContextString = ", " + HtnTerm::ToString(farthestFailureContext, false, true);
                     }
                     *result = GetCharPtrFromString("[{\"False\" :[]}, {\"failureIndex\" :[{\"" + lexical_cast<string>(furthestFailureIndex) + "\" :[]}]}" + failureContextString + "]");
                 }

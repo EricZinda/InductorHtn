@@ -184,6 +184,7 @@ public:
             rulesThatUnifySize +
             (unifier == nullptr ? 0 : sizeof(unifier) + unifier->size() * sizeof(UnifierItemType)) +
             (previousSolutions == nullptr ? 0 : sizeof(previousSolutions) + unifier->size() * sizeof(UnifierItemType)) +
+            currentFailureContext.size() * sizeof(std::shared_ptr<HtnTerm>) +
             previousSolutionsSize +
             variablesToKeepSize;
     }
@@ -220,6 +221,7 @@ public:
     
     // NOTE: If you change members, remember to change dynamicSize() function too
     ResolveContinuePoint continuePoint;
+    std::vector<std::shared_ptr<HtnTerm>> currentFailureContext;
     int currentRuleIndex;
     // Remembers the count of original goals which will be at the end of m_resolvent, so we can debug better
     int originalGoalCount;
@@ -252,13 +254,13 @@ public:
         deepestFailure = -1;
         deepestFailureGoal = nullptr;
         deepestFailureOriginalGoalIndex = -1;
+        farthestFailureDepth = -1;
         farthestFailureOriginalGoalIndex = -1;
-        currentFailureContext.clear();
         farthestFailureContext.clear();
     }
     std::string GetStackString();
     int64_t RecordMemoryUsage(int64_t &initialTermMemory, int64_t &initialRuleSetMemory);
-    void RecordFailure(std::shared_ptr<HtnTerm> goal, int goalsLeftToProcess);
+    void RecordFailure(std::shared_ptr<HtnTerm> goal, std::shared_ptr<ResolveNode> currentNode);
     static std::shared_ptr<UnifierType> SimplifySolution(const UnifierType &solution, std::vector<std::shared_ptr<HtnTerm>> &goals);
 
     int64_t dynamicSize()
@@ -279,7 +281,6 @@ public:
         return sizeof(ResolveState) +
             deepestFailureStack.size() + highestMemoryUsedStack.size() +
             farthestFailureContext.size() * sizeof(std::shared_ptr<HtnTerm>) +
-            currentFailureContext.size() * sizeof(std::shared_ptr<HtnTerm>) +
             initialGoals->size() * sizeof(std::shared_ptr<HtnTerm>) +
             stackSize +
             (solutions == nullptr ? 0 : (sizeof(std::vector<UnifierType>) + solutions->size() * sizeof(UnifierItemType)));
@@ -290,9 +291,9 @@ public:
     int deepestFailure;
     std::shared_ptr<HtnTerm> deepestFailureGoal;
     int deepestFailureOriginalGoalIndex;
+    int farthestFailureDepth;
     int farthestFailureOriginalGoalIndex;
     std::vector<std::shared_ptr<HtnTerm>> farthestFailureContext;
-    std::vector<std::shared_ptr<HtnTerm>> currentFailureContext;
     std::string deepestFailureStack;
     bool fullTrace;
     int64_t highestMemoryUsed;

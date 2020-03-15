@@ -178,10 +178,11 @@ shared_ptr<ResolveNode> ResolveNode::CreateChildNode(HtnTermFactory *termFactory
     }
     
     shared_ptr<ResolveNode> newNode = shared_ptr<ResolveNode>(new ResolveNode(childResolvent, simplifiedUnifier));
+    newNode->currentFailureContext = currentFailureContext;
     newNode->originalGoalCount = originalGoalsLeft;
     newNode->isStandaloneResolve = isStandaloneResolve;
     newNode->variablesToKeep = variablesToKeep;
-    
+
     return newNode;
 }
 
@@ -302,6 +303,7 @@ ResolveState::ResolveState(HtnTermFactory *termFactoryArg, HtnRuleSet *progArg, 
     collectAllSolutions(false),
     deepestFailure(-1),
     deepestFailureOriginalGoalIndex(-1),
+    farthestFailureDepth(-1),
     farthestFailureOriginalGoalIndex(-1),
     fullTrace(false),
     highestMemoryUsed(0),
@@ -344,33 +346,33 @@ string ResolveState::GetStackString()
     return stackString.str();
 }
 
-void ResolveState::RecordFailure(shared_ptr<HtnTerm> goal, int goalsLeftToProcess)
+void ResolveState::RecordFailure(shared_ptr<HtnTerm> goal, shared_ptr<ResolveNode> currentNode)
 {
-    // If we are a pushed resolver...
-    
     // Which original goal is failing? It is the one *before* the goalsLeftToProcess
+    int goalsLeftToProcess = currentNode->CountOfGoalsLeftToProcess();
     FailFastAssert(goalsLeftToProcess >= 0 && goalsLeftToProcess < initialGoals->size());
     int originalGoalIndex = (int) initialGoals->size() - goalsLeftToProcess - 1;
     FailFastAssert(originalGoalIndex >= 0 && originalGoalIndex < initialGoals->size());
     
     shared_ptr<HtnTerm> originalGoalInProgress = (*initialGoals)[originalGoalIndex];
-    int size = (int) resolveStack->size();
+    int stackDepth = (int) resolveStack->size();
     
-    // Replace the context if we've gotten to a new original goal OR
+    // Replace the failure context if we've gotten to a new original goal OR
     // If we've gotten farther along in the current original goal since that will be a better error
-    if(
-       (originalGoalIndex > farthestFailureOriginalGoalIndex) ||
+    if( (originalGoalIndex > farthestFailureOriginalGoalIndex) ||
         ((originalGoalIndex == farthestFailureOriginalGoalIndex) &&
-         ((farthestFailureContext.size() == 0) || (currentFailureContext[0]->TermCompare(*farthestFailureContext[0].get()) > 0))))
+         ((farthestFailureContext.size() == 0) || // We haven't set a context yet
+          (stackDepth > farthestFailureDepth)))) // We've set one but this is deeper
     {
         farthestFailureOriginalGoalIndex = originalGoalIndex;
-        farthestFailureContext = currentFailureContext;
-        Trace1("           ", "RecordFailure Context:  {0}", initialIndent + resolveStack->size(), fullTrace, HtnTerm::ToString(currentFailureContext));
+        farthestFailureContext = currentNode->currentFailureContext;
+        farthestFailureDepth = stackDepth;
+        Trace1("           ", "RecordFailure Context:  {0}", initialIndent + resolveStack->size(), fullTrace, HtnTerm::ToString(farthestFailureContext));
     }
     
-    if((originalGoalIndex != deepestFailureOriginalGoalIndex) || ((size >= deepestFailure) && (goal != nullptr)))
+    if((originalGoalIndex != deepestFailureOriginalGoalIndex) || ((stackDepth >= deepestFailure) && (goal != nullptr)))
     {
-        deepestFailure = size;
+        deepestFailure = stackDepth;
         deepestFailureGoal = goal;
         deepestFailureOriginalGoalIndex = originalGoalIndex;
         deepestFailureStack = GetStackString();
@@ -935,7 +937,7 @@ shared_ptr<UnifierType> HtnGoalResolver::ResolveNext(ResolveState *state)
                                 currentNode->continuePoint = ResolveContinuePoint::NextRuleThatUnifies;
                                 if(currentNode->rulesThatUnify->size() == 0)
                                 {
-                                    state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                                    state->RecordFailure(goal, currentNode);
                                 }
                                 Trace1("           ", "found:{0} rules that unify", indentLevel, state->fullTrace, currentNode->rulesThatUnify->size());
                             }
@@ -1039,7 +1041,7 @@ void HtnGoalResolver::RuleAggregate(ResolveState *state)
             {
                 // There were no solutions: fail!
                 // Put back on whatever solutions we had before the first() so we can continue adding to them
-                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                state->RecordFailure(goal, currentNode);
                 resolveStack->pop_back();
             }
             else
@@ -1085,7 +1087,7 @@ void HtnGoalResolver::RuleAggregate(ResolveState *state)
                             // Not a number: fail!
                             // Put back on whatever solutions we had before the first() so we can continue adding to them
                             Trace4("           ", "{0}() Variable: {1} was {2} which could not be resolved to a number in {3}", state->initialIndent + resolveStack->size(), state->fullTrace, aggName, variableToAgg->ToString(), equivalence->ToString(), goal->ToString());
-                            state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                            state->RecordFailure(goal, currentNode);
                             resolveStack->pop_back();
                             break;
                         }
@@ -1095,7 +1097,7 @@ void HtnGoalResolver::RuleAggregate(ResolveState *state)
                         // No variable: fail!
                         // Put back on whatever solutions we had before the first() so we can continue adding to them
                         Trace3("           ", "{0}() Variable: {1} not found in {2}", state->initialIndent + resolveStack->size(), state->fullTrace, aggName, variableToAgg->ToString(), ToString(solution));
-                        state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                        state->RecordFailure(goal, currentNode);
                         resolveStack->pop_back();
                         break;
                     }
@@ -1228,7 +1230,7 @@ void HtnGoalResolver::RuleAtomDowncase(ResolveState* state)
             if (result == nullptr)
             {
                 // There were no solutions: fail!
-                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                state->RecordFailure(goal, currentNode);
                 resolveStack->pop_back();
             }
             else
@@ -1284,7 +1286,7 @@ void HtnGoalResolver::RuleAtomConcat(ResolveState* state)
             if (result == nullptr)
             {
                 // There were no solutions: fail!
-                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                state->RecordFailure(goal, currentNode);
                 resolveStack->pop_back();
             }
             else
@@ -1414,7 +1416,7 @@ void HtnGoalResolver::RuleDistinct(ResolveState *state)
             {
                 // There were no solutions: fail!
                 // Put back on whatever solutions we had before the first() so we can continue adding to them
-                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                state->RecordFailure(goal, currentNode);
                 resolveStack->pop_back();
             }
             else
@@ -1488,10 +1490,14 @@ void HtnGoalResolver::RuleDistinct(ResolveState *state)
 //
 // the failureContext associated with a failure will be returned from ResolveAll()
 //
-// failureContext/n is a predicate that stores away a set of terms if this execution point
+// the currently active failureContext is stored on the ResolveNode and carried forward as we
+// do a depth first recurse.  This is so that it will get rolled back properly on backtrack
+// it gets recorded as the "farthest failure" if a failure happens which
 // is the farthest point the resolver has gotten in the list of initial goals, or is equivalent
-// to the farthest in the list, but has a larger ?Order.
-// failureContext(?Order, ?SetOfTerms...)
+// to the farthest in the list, but has a deeper stackdepth.
+//
+// ?Tag is simply something to help the developer figure out which error it was
+// failureContext(?Tag, ?SetOfTerms...)
 void HtnGoalResolver::RuleFailureContext(ResolveState *state)
 {
     shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1514,11 +1520,25 @@ void HtnGoalResolver::RuleFailureContext(ResolveState *state)
             {
                 // Remember the failure context in case this is the deepest failure
                 Trace1("           ", "failureContext() succeeded:  {0}", state->initialIndent + resolveStack->size(), state->fullTrace, HtnTerm::ToString(goal->arguments()));
-                state->currentFailureContext = goal->arguments();
 
                 // Rule resolves to true so no new terms, no unifiers got added since it was ground so no changes there
                 // Nothing to process on children so no special return handling
-                resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, {}, &(state->uniquifier)));
+                shared_ptr<ResolveNode> newNode = currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, {}, &(state->uniquifier));
+                
+                if(goal->arguments()[0]->name() == "clear")
+                {
+                    // Clears any failure context
+                    state->farthestFailureContext.clear();
+                    state->farthestFailureDepth = -1;
+                    newNode->currentFailureContext.clear();
+                }
+                else
+                {
+                    // Set the failure context on the new node so it will carry forward
+                    newNode->currentFailureContext = goal->arguments();
+                }
+                
+                resolveStack->push_back(newNode);
                 currentNode->continuePoint = ResolveContinuePoint::Return;
             }
         }
@@ -1562,7 +1582,7 @@ void HtnGoalResolver::RuleFirst(ResolveState *state)
             if(solutions == nullptr)
             {
                 // There were no solutions: fail!
-                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                state->RecordFailure(goal, currentNode);
                 resolveStack->pop_back();
             }
             else
@@ -1638,7 +1658,7 @@ void HtnGoalResolver::RuleForAll(ResolveState *state)
                 // There were no solutions: so it is a failure!
                 // Just like if we couldn't find rules to unify with, we stop the depth first search here
                 Trace1("FAIL       ", "forall() rule failed: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, HtnTerm::ToString((*currentNode->resolvent())[0]->arguments()));
-                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                state->RecordFailure(goal, currentNode);
                 resolveStack->pop_back();
             }
             else
@@ -1701,7 +1721,7 @@ void HtnGoalResolver::RuleIs(ResolveState *state)
                 {
                     // expression can't be resolved, therefore nothing down this branch can work and it fails
                     Trace1("FAIL       ", "can't arithmetically evaluate {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                    state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                    state->RecordFailure(goal, currentNode);
                     resolveStack->pop_back();
                 }
             }
@@ -1748,7 +1768,7 @@ void HtnGoalResolver::RuleIsAtom(ResolveState* state)
             {
                 // Not an atom, therefore nothing down this branch can work and it fails
                 Trace1("FAIL       ", "not an atom {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                state->RecordFailure(goal, currentNode);
                 resolveStack->pop_back();
             }
         }
@@ -1836,7 +1856,7 @@ void HtnGoalResolver::RuleNot(ResolveState *state)
                 // There were solutions: fail!
                 // Just like if we couldn't find rules to unify with, we stop the depth first search here
                 Trace1("FAIL       ", "not() rule failed, goals are true: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, HtnTerm::ToString((*currentNode->resolvent())[0]->arguments()));
-                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                state->RecordFailure(goal, currentNode);
                 resolveStack->pop_back();
             }
             
@@ -1885,7 +1905,7 @@ void HtnGoalResolver::RuleRetract(ResolveState* state)
                     else
                     {
                         Trace1("FAIL       ", "retract() rule failed, fact doesn't exist: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, term->ToString());
-                        state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                        state->RecordFailure(goal, currentNode);
                         resolveStack->pop_back();
                         return;
                     }
@@ -2065,7 +2085,7 @@ void HtnGoalResolver::RuleSortBy(ResolveState *state)
             {
                 // There were no solutions: fail!
                 // Put back on whatever solutions we had before the first() so we can continue adding to them
-                state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                state->RecordFailure(goal, currentNode);
                 resolveStack->pop_back();
             }
             else
@@ -2178,7 +2198,7 @@ void HtnGoalResolver::RuleTermCompare(ResolveState *state)
                 else
                 {
                     Trace1("FAIL       ", "{0} failed", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                    state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                    state->RecordFailure(goal, currentNode);
                     resolveStack->pop_back();
                 }
             }
@@ -2258,7 +2278,7 @@ void HtnGoalResolver::RuleUnify(ResolveState *state)
                 if(result == nullptr)
                 {
                     // There were no solutions: fail!
-                    state->RecordFailure(goal, currentNode->CountOfGoalsLeftToProcess());
+                    state->RecordFailure(goal, currentNode);
                     resolveStack->pop_back();
                 }
                 else

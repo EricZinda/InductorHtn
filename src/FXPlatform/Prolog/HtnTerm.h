@@ -99,6 +99,37 @@ private:
     std::weak_ptr<HtnTermFactory> m_factory;
 };
 
+class HtnTermVectorComparer
+{
+public:
+    bool operator() (const std::vector<std::shared_ptr<HtnTerm>> left, const std::vector<std::shared_ptr<HtnTerm>> right) const
+    {
+        if(left.size() < right.size())
+        {
+            return true;
+        }
+        else if(left.size() > right.size())
+        {
+            return false;
+        }
+        
+        for(int index = (int) left.size() - 1; index >= 0 ; --index)
+        {
+            int compareResult = left[index]->TermCompare(*right[index].get());
+            if(compareResult < 0)
+            {
+                return true;
+            }
+            else if(compareResult > 0)
+            {
+                return false;
+            }
+        }
+        
+        return false;
+    }
+};
+
 class HtnTermComparer
 {
 public:

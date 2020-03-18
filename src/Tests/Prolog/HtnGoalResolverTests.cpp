@@ -984,7 +984,6 @@ SUITE(HtnGoalResolverTests)
         CHECK_EQUAL(finalUnifier, "((?X = mia))");
     }
 
-
     TEST(HtnGoalResolverTrueFalseTests)
     {
         HtnGoalResolver resolver;
@@ -1405,7 +1404,7 @@ SUITE(HtnGoalResolverTests)
         shared_ptr<vector<UnifierType>> unifier;
         
         //        SetTraceFilter((int)SystemTraceType::Solver | (int) SystemTraceType::Unifier,  TraceDetail::Diagnostic);
-        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
+//        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
         
         // ***** single sum() goal where all terms fail
         compiler->Clear();
@@ -1466,6 +1465,78 @@ SUITE(HtnGoalResolverTests)
         CHECK_EQUAL(finalUnifier, "((?X = 1, ?Total = 3, ?Name = One))");
     }
     
+    TEST(HtnGoalResolverDistinctTests)
+    {
+        HtnGoalResolver resolver;
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        string testState;
+        string goals;
+        string finalUnifier;
+        shared_ptr<vector<UnifierType>> unifier;
+        
+        //        SetTraceFilter((int)SystemTraceType::Solver | (int) SystemTraceType::Unifier,  TraceDetail::Diagnostic);
+//        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
+
+        // ***** no variables, no domain
+        compiler->Clear();
+        testState = string() +
+        "letter(c). letter(b). letter(a).\r\n"
+        "test(_) :- letter(_).\r\n"
+        "trace(?x) :- .\r\n"
+        "goals( distinct(_, test(_)) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "(())");
+        
+        // ***** single variable, no domain
+        compiler->Clear();
+        testState = string() +
+        "letter(c). letter(b). letter(a).\r\n" +
+        "trace(?x) :- .\r\n"
+        "goals( distinct(_, letter(?X)) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = c), (?X = b), (?X = a))");
+        
+        // ***** multiple variables, no domain
+        compiler->Clear();
+        testState = string() +
+        "letter(c). letter(b). letter(a).\r\n" +
+        "trace(?x) :- .\r\n"
+        "goals( distinct(_, letter(?X), letter(?Y)) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = c, ?Y = c), (?X = c, ?Y = b), (?X = c, ?Y = a), (?X = b, ?Y = c), (?X = b, ?Y = b), (?X = b, ?Y = a), (?X = a, ?Y = c), (?X = a, ?Y = b), (?X = a, ?Y = a))");
+    
+        // ***** single variable, with domain
+        compiler->Clear();
+        testState = string() +
+        "letter(c). letter(b). letter(a).\r\n" +
+        "trace(?x) :- .\r\n"
+        "goals( distinct(?X, letter(?X)) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = c), (?X = b), (?X = a))");
+        
+        // ***** multiple variables (one unbound), with domain
+        // which unbound gets chosen is indeterminate
+        compiler->Clear();
+        testState = string() +
+        "letter(c). letter(b). letter(a).\r\n" +
+        "trace(?x) :- .\r\n"
+        "goals( distinct(?X, letter(?X), letter(?Y)) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = c, ?Y = c), (?X = b, ?Y = c), (?X = a, ?Y = c))");
+    }
+    
     TEST(HtnGoalResolverCountTests)
     {
         HtnGoalResolver resolver;
@@ -1478,7 +1549,7 @@ SUITE(HtnGoalResolverTests)
         shared_ptr<vector<UnifierType>> unifier;
         
         //        SetTraceFilter((int)SystemTraceType::Solver | (int) SystemTraceType::Unifier,  TraceDetail::Diagnostic);
-        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
+//        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
         
         // ***** single count() goal where all items fail
         compiler->Clear();
@@ -1546,7 +1617,7 @@ SUITE(HtnGoalResolverTests)
         shared_ptr<vector<UnifierType>> unifier;
         
         //        SetTraceFilter((int)SystemTraceType::Solver | (int) SystemTraceType::Unifier,  TraceDetail::Diagnostic);
-        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
+//        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
         
         // ***** single sortBy() goal where all items fail
         compiler->Clear();
@@ -1703,6 +1774,92 @@ SUITE(HtnGoalResolverTests)
         CHECK_EQUAL(finalUnifier, "((?Capital = A, ?Combo = ComboA))");
     }
     
+    
+    TEST(HtnGoalResolverIsTests)
+    {
+        HtnGoalResolver resolver;
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        string testState;
+        string goals;
+        string finalUnifier;
+        shared_ptr<vector<UnifierType>> unifier;
+        
+        //        SetTraceFilter((int)SystemTraceType::Solver | (int) SystemTraceType::Unifier,  TraceDetail::Diagnostic);
+//        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
+        
+        // ***** is/2 with two arithmetic arguments succeeds
+        compiler->Clear();
+        testState = string() +
+        "goals(is(1, 1)).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "(())");
+
+        compiler->Clear();
+        testState = string() +
+        "goals(is(+(1, 1), +(0, 2))).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "(())");
+
+        // ***** is/2 with variable lvalue and arithmetic argument unifies
+        compiler->Clear();
+        testState = string() +
+        "goals(is(?X, 1)).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = 1))");
+
+        compiler->Clear();
+        testState = string() +
+        "goals(is(?X, +(1,2))).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = 3))");
+
+        // ***** is/2 with variable lvalue that has been set and arithmetic argument works
+        compiler->Clear();
+        testState = string() +
+        "goals(=(?X, 5), is(?X, 5)).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = 5))");
+        
+        // ***** is/2 with variable lvalue that has been set with non-arithmetic term and arithmetic argument fails
+        // but doesn't throw
+        compiler->Clear();
+        testState = string() +
+        "goals(=(?X, a), is(?X, 5)).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "null");
+
+        // ***** is/2 with non-arithmetic arguments throws
+        bool caught = false;
+        try {
+            compiler->Clear();
+            testState = string() +
+            "goals(is(b, b)).\r\n";
+            CHECK(compiler->Compile(testState));
+            unifier = compiler->SolveGoals();
+            finalUnifier = HtnGoalResolver::ToString(unifier.get());
+            CHECK_EQUAL(finalUnifier, "null");
+        }
+        catch(...)
+        {
+            caught = true;
+        }
+        CHECK(caught);
+    }
+    
     TEST(HtnGoalResolverNotTests)
     {
         HtnGoalResolver resolver;
@@ -1715,7 +1872,7 @@ SUITE(HtnGoalResolverTests)
         shared_ptr<vector<UnifierType>> unifier;
         
         //        SetTraceFilter((int)SystemTraceType::Solver | (int) SystemTraceType::Unifier,  TraceDetail::Diagnostic);
-        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
+//        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
         
         // ***** single not() goal that fails
         compiler->Clear();

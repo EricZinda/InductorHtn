@@ -568,8 +568,9 @@ shared_ptr<vector<RuleBindingType>> HtnGoalResolver::FindAllRulesThatUnify(HtnTe
             {
                 foundRule = true;
                 
-                // Make the variables in the rule unique
-                shared_ptr<HtnRule> currentRule = item.MakeVariablesUnique(prog, termFactory, goal->name() + lexical_cast<string>(*uniquifier) + "_" );
+                // Make the variables in the rule unique, make sure they continue to start with "_" (illegal for a prolog name) so we can tell if they
+                // are anonymous in rules
+                shared_ptr<HtnRule> currentRule = item.MakeVariablesUnique(prog, termFactory, "_" + goal->name() + lexical_cast<string>(*uniquifier) + "_" );
                 *uniquifier = (*uniquifier) + 1;
                 
                 // Then unify
@@ -1423,33 +1424,73 @@ void HtnGoalResolver::RuleDistinct(ResolveState *state)
             {
                 StaticFailFastAssert((*currentNode->resolvent())[0]->arguments().size() > 1);
                 string variable = (*currentNode->resolvent())[0]->arguments()[0]->name();
-                
-                // Put all of the Evaluated values in a map along with the index where they came from
-                // OK to put HtnTerm
-                map<shared_ptr<HtnTerm>, int, HtnTermComparer> items;
-                for(int index = 0; index < solutions->size(); ++index)
+
+                vector<int> uniqueSolutionIndices;
+                if(variable[0] == '_')
                 {
-                    UnifierType &binding = (*solutions)[index];
-                    bool found = false;
-                    for(UnifierItemType item : binding)
+                    if(solutions->size() > 0)
                     {
-                        if(item.first->name() == variable)
+                        // There was no variable, return all unique combinations of variables
+                        map<vector<shared_ptr<HtnTerm>>, int, HtnTermVectorComparer> items;
+                        
+                        // Each vector representing a solution has the same variable in the same position
+                        // Assign indices for all the variables
+                        UnifierType &binding = (*solutions)[0];
+                        map<string, int> variablePositions;
+                        for(UnifierItemType item : binding)
                         {
-                            shared_ptr<HtnTerm> term = item.second;
-                            // Variable can contain any valid term
-                            StaticFailFastAssert(term != nullptr);
-                            if(items.find(term) == items.end())
+                            variablePositions[item.first->name()] = variablePositions.size();
+                        }
+                            
+                        // Now add each solution if they are unique
+                        for(int index = 0; index < solutions->size(); ++index)
+                        {
+                            vector<shared_ptr<HtnTerm>> solutionVector;
+                            solutionVector.resize(variablePositions.size());
+                            UnifierType &binding = (*solutions)[index];
+                            for(UnifierItemType item : binding)
                             {
-                                items[term] = index;
+                                solutionVector[variablePositions[item.first->name()]] = item.second;
                             }
                             
-                            found = true;
-                            break;
+                            if(items.find(solutionVector) == items.end())
+                            {
+                                items[solutionVector] = index;
+                                uniqueSolutionIndices.push_back(index);
+                            }
                         }
                     }
-                    
-                    // Need to have the variable available
-                    StaticFailFastAssert(found);
+                }
+                else
+                {
+                    // Put all of the Evaluated values in a map along with the index where they came from
+                    // OK to put HtnTerm
+                    map<shared_ptr<HtnTerm>, int, HtnTermComparer> items;
+                    for(int index = 0; index < solutions->size(); ++index)
+                    {
+                        UnifierType &binding = (*solutions)[index];
+                        bool found = false;
+                        for(UnifierItemType item : binding)
+                        {
+                            if(item.first->name() == variable)
+                            {
+                                shared_ptr<HtnTerm> term = item.second;
+                                // Variable can contain any valid term
+                                StaticFailFastAssert(term != nullptr);
+                                if(items.find(term) == items.end())
+                                {
+                                    items[term] = index;
+                                    uniqueSolutionIndices.push_back(index);
+                                }
+                                
+                                found = true;
+                                break;
+                            }
+                        }
+                        
+                        // Need to have the variable available
+                        StaticFailFastAssert(found);
+                    }
                 }
                 
                 // Create a fake "rule" so we can continue the search.
@@ -1457,9 +1498,9 @@ void HtnGoalResolver::RuleDistinct(ResolveState *state)
                 
                 // Add all the solutions we found as "unified rules" so we can loop through them
                 currentNode->rulesThatUnify = shared_ptr<vector<RuleBindingType>>(new vector<RuleBindingType>());
-                for(auto item : items)
+                for(int uniqueIndex : uniqueSolutionIndices)
                 {
-                    currentNode->rulesThatUnify->push_back(RuleBindingType(rule, (*solutions)[item.second]));
+                    currentNode->rulesThatUnify->push_back(RuleBindingType(rule, (*solutions)[uniqueIndex]));
                 }
                 
                 // Since the solutions we have already have the unifiers from this node already included,
@@ -1684,7 +1725,9 @@ void HtnGoalResolver::RuleForAll(ResolveState *state)
     }
 }
 
-// is(?Variable, ?Term)
+// The second argument must be ground
+// The first argument can be ground OR a variable
+// is(?Variable | ?Term, ?Term)
 void HtnGoalResolver::RuleIs(ResolveState *state)
 {
     shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
@@ -1696,26 +1739,58 @@ void HtnGoalResolver::RuleIs(ResolveState *state)
     {
         case ResolveContinuePoint::CustomStart:
         {
-            // the "is" operator is not treated as a rule, it is handled as a way to unify a variable with the result of an arithmetic calculation
-            if(goal->arguments().size() != 2 || !goal->arguments()[0]->isVariable() || !goal->arguments()[1]->isArithmetic())
+            // the "is" operator handled as a way to unify a variable with the result of an arithmetic calculation
+            // OR to test equality of a term with an arithmetic calculation
+            if(goal->arguments().size() != 2 || !goal->arguments()[1]->isArithmetic())
             {
                 // Invalid program
-                Trace1("ERROR      ", "is() must have two terms where one is a variable and one is arithmetic and ground:{0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-                StaticFailFastAssertDesc(false, ("is() must have two terms where one is a variable and one is arithmetic and ground: " + goal->ToString()).c_str());
+                Trace1("ERROR      ", "is() must have two terms where the left can be a variable or a term and the right is arithmetic and ground:{0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
+                StaticFailFastAssertDesc(false, ("is() must have two terms where the left can be a variable or a term and the right is arithmetic and ground: " + goal->ToString()).c_str());
                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             }
             else
             {
-                shared_ptr<HtnTerm> variable = goal->arguments()[0];
+                shared_ptr<HtnTerm> lValue = goal->arguments()[0];
                 shared_ptr<HtnTerm> expression = goal->arguments()[1];
                 shared_ptr<HtnTerm> exprResult = expression->Eval(termFactory);
                 if(exprResult != nullptr)
                 {
-                    // We treat this as a rule where the variable got unified with the result. So, there are no new goals to add, but there are new unifiers
-                    // Nothing to do on return
-                    UnifierType exprUnifier( { UnifierItemType(variable, exprResult) } );
-                    resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, exprUnifier, &(state->uniquifier)));
-                    currentNode->continuePoint = ResolveContinuePoint::Return;
+                    if(lValue->isVariable())
+                    {
+                        // We treat this as a rule where the lValue got unified with the result. So, there are no new goals to add, but there are new unifiers
+                        // Nothing to do on return
+                        UnifierType exprUnifier( { UnifierItemType(lValue, exprResult) } );
+                        resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, exprUnifier, &(state->uniquifier)));
+                        currentNode->continuePoint = ResolveContinuePoint::Return;
+                    }
+                    else
+                    {
+                        if(lValue->isArithmetic())
+                        {
+                            shared_ptr<HtnTerm> lValueResult = lValue->Eval(termFactory);
+                            if(lValueResult->TermCompare(*exprResult) == 0)
+                            {
+                                // Rule resolves to true so no new terms, no unifiers got added since it was ground so no changes there
+                                // Nothing to process on children so no special return handling
+                                resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, {}, &(state->uniquifier)));
+                                currentNode->continuePoint = ResolveContinuePoint::Return;
+                            }
+                            else
+                            {
+                                // lValue != rValue so it fails
+                                Trace2("FAIL       ", "{0} is not {1}", state->initialIndent + resolveStack->size(), state->fullTrace, lValueResult->ToString(), exprResult->ToString());
+                                state->RecordFailure(goal, currentNode);
+                                resolveStack->pop_back();
+                            }
+                        }
+                        else
+                        {
+                            // lValue is not arithmetic so it fails
+                            Trace1("FAIL       ", "not arithmetic {0}", state->initialIndent + resolveStack->size(), state->fullTrace, lValue->ToString());
+                            state->RecordFailure(goal, currentNode);
+                            resolveStack->pop_back();
+                        }
+                    }
                 }
                 else
                 {

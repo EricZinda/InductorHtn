@@ -116,6 +116,8 @@ SUITE(HtnPlannerTests)
 
     TEST(PlannerNormalMethodTest)
     {
+//                SetTraceFilter((int) SystemTraceType::Solver | (int) SystemTraceType::System, TraceDetail::Diagnostic);
+
         shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
         shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
         shared_ptr<HtnPlanner> planner = shared_ptr<HtnPlanner>(new HtnPlanner());

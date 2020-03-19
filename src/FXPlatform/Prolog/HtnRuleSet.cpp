@@ -76,6 +76,88 @@ void HtnRuleSet::AddRule(shared_ptr<HtnTerm> head, vector<shared_ptr<HtnTerm>> t
     m_sharedRules->AddRule(head, tail);
 }
 
+// For a given argument we have these cases that *could* work (if the terms are equivalent)
+// Constant / Constant -> If they are equal
+// Constant / Variable
+// Compound / Compound -> If they are equivalent
+
+bool HtnRuleSet::CanPotentiallyUnify(const HtnTerm *term, const HtnTerm *ruleHead) const
+{
+    if(term->isEquivalentCompoundTerm(ruleHead) || (term->isConstant() && ruleHead->isConstant()))
+    {
+        for(int index = 0; index < term->arguments().size(); ++index)
+        {
+            HtnTerm *termArg = term->arguments()[index].get();
+            HtnTerm *ruleHeadArg = ruleHead->arguments()[index].get();
+            if(termArg->isConstant())
+            {
+                // This arg is a constant
+                if(ruleHeadArg->isConstant())
+                {
+                    // Constant / Constant
+                    // So is the head. Are they the same constant?
+                    
+                    if(!(termArg->nameEqualTo(*ruleHeadArg)))
+                    {
+                        
+                        // Any arguments that are both constants and not == could
+                        // never be unified
+                        return false;
+                    }
+                    else
+                    {
+                        // Yes, keep checking
+                    }
+                }
+                else
+                {
+                    // term arg is constant, head arg is not, can only unify if head arg
+                    // is a variable
+                    if(!ruleHeadArg->isVariable())
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        // Constant / Variable
+                        // This arg will unify, keep checking
+                    }
+                }
+            }
+            else if(termArg->isCompoundTerm())
+            {
+                // Term arg is compound
+                if(ruleHeadArg->isConstant())
+                {
+                    // Can't unify a compound with a constant
+                    return false;
+                }
+                else if(ruleHeadArg->isCompoundTerm())
+                {
+                    // Compound / Compound
+                    // Might work, if they are equivalent
+                    if(!termArg->isEquivalentCompoundTerm(ruleHeadArg))
+                    {
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                // term can never be a variable
+                FXDebugAssert(false);
+            }
+        }
+        
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+
 void HtnRuleSet::ClearAll()
 {
     m_sharedRules->ClearAll();
@@ -144,7 +226,7 @@ bool HtnRuleSet::HasEquivalentRule(std::shared_ptr<HtnTerm> term) const
     bool found = false;
     AllRules([&](const HtnRule &rule)
       {
-          if(rule.head()->isEquivalentCompoundTerm(term))
+          if(rule.head()->isEquivalentCompoundTerm(term.get()))
           {
               found = true;
               return false;

@@ -47,7 +47,10 @@ public:
     const std::vector<std::shared_ptr<HtnTerm>> &arguments() const { return m_arguments; }
     int arity() const { return (int) m_arguments.size(); }
     // Very efficient name comparison because names are interned
-    bool nameEqualTo(HtnTerm &other) { return m_namePtr == other.m_namePtr; }
+    bool nameEqualTo(const HtnTerm &other) const
+    {
+        return m_namePtr == other.m_namePtr;
+    }
     int64_t dynamicSize();
     std::shared_ptr<HtnTerm> Eval(HtnTermFactory *factory);
     void GetAllVariables(std::vector<std::string> *result);
@@ -64,7 +67,7 @@ public:
     bool isConstant() const { return !m_isVariable && m_arguments.size() == 0; }
 	bool isCut() const { return  *m_namePtr == "!";  }
     // We can compare pointers for equivalence because names are interned
-    bool isEquivalentCompoundTerm(std::shared_ptr<HtnTerm> other) { return arity() == other->arity() && m_namePtr == other->m_namePtr; }
+    bool isEquivalentCompoundTerm(const HtnTerm *other) const { return arity() == other->arity() && m_namePtr == other->m_namePtr; }
     bool isGround() const;
     void SetInterned() { m_isInterned = true; };
     bool isTrue() const { return !m_isVariable && *m_namePtr == "true"; }
@@ -82,6 +85,8 @@ public:
     std::string ToString(bool isInList = false, bool json = false);
     static std::string ToString(const std::vector<std::shared_ptr<HtnTerm>> &goals, bool surroundWithParenthesis = true, bool json = false);
     
+    const std::string *m_namePtr;
+
 private:
     // All constructors are private so that TermFactory is used so we can track memory easier
     friend class HtnTermFactory;
@@ -101,7 +106,6 @@ private:
     std::vector<std::shared_ptr<HtnTerm>> m_arguments;
     bool m_isInterned;
     bool m_isVariable;
-    const std::string *m_namePtr;
     std::weak_ptr<HtnTermFactory> m_factory;
 };
 

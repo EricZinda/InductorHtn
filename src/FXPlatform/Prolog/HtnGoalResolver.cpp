@@ -584,7 +584,7 @@ shared_ptr<vector<RuleBindingType>> HtnGoalResolver::FindAllRulesThatUnify(HtnTe
         
         bool foundRule = false;
         int goalArgumentsSize = (int) goal->arguments().size();
-        prog->AllRules([&](const HtnRule &item)
+        prog->AllRulesThatCouldUnify(goal.get(), [&](const HtnRule &item)
         {
             // If we ran out of memory budget, return whatever we found
             int64_t totalMemoryUsed = (termFactory->dynamicSize() - initialTermMemory) + (prog->dynamicSize() - initialRuleSetMemory) + memoryUsed;
@@ -596,32 +596,29 @@ shared_ptr<vector<RuleBindingType>> HtnGoalResolver::FindAllRulesThatUnify(HtnTe
                 return false;
             }
         
-            if(item.head()->isEquivalentCompoundTerm(goal) || (goal->isConstant() && item.head()->isConstant()))
+            // Unify
+            foundRule = true;
+            shared_ptr<UnifierType> substitutions = HtnGoalResolver::Unify(termFactory, item.head(), goal);
+            if(substitutions != nullptr)
             {
-                // Unify
-                foundRule = true;
-                shared_ptr<UnifierType> substitutions = HtnGoalResolver::Unify(termFactory, item.head(), goal);
-                if(substitutions != nullptr)
+                // IF the unification works, make the variables in the rule unique,
+                // since this is expensive in the inner loop
+                string uniquifierString = goal->name() + lexical_cast<string>(*uniquifier) + "_";
+                std::map<std::string, std::shared_ptr<HtnTerm>> variableMap;
+                shared_ptr<HtnRule> currentRule = item.MakeVariablesUnique(termFactory, uniquifierString, variableMap);
+                *uniquifier = (*uniquifier) + 1;
+
+                // Also need to fix up the substitutions to use the new values since we renamed them
+                for(UnifierItemType &item : *substitutions)
                 {
-                    // IF the unification works, make the variables in the rule unique,
-                    // since this is expensive in the inner loop
-                    string uniquifierString = goal->name() + lexical_cast<string>(*uniquifier) + "_";
-                    std::map<std::string, std::shared_ptr<HtnTerm>> variableMap;
-                    shared_ptr<HtnRule> currentRule = item.MakeVariablesUnique(termFactory, uniquifierString, variableMap);
-                    *uniquifier = (*uniquifier) + 1;
-
-                    // Also need to fix up the substitutions to use the new values since we renamed them
-                    for(UnifierItemType &item : *substitutions)
-                    {
-                        item.first = item.first->RenameVariables(termFactory, variableMap);
-                        item.second = item.second->RenameVariables(termFactory, variableMap);
-                    }
-
-                    foundRules->push_back(RuleBindingType(currentRule, *substitutions));
-                    memoryUsed += sizeof(RuleBindingType) + foundRules->back().second.size() * sizeof(UnifierItemType);
+                    item.first = item.first->RenameVariables(termFactory, variableMap);
+                    item.second = item.second->RenameVariables(termFactory, variableMap);
                 }
+
+                foundRules->push_back(RuleBindingType(currentRule, *substitutions));
+                memoryUsed += sizeof(RuleBindingType) + foundRules->back().second.size() * sizeof(UnifierItemType);
             }
-            
+                
             // Keep going
             return true;
         });
@@ -2088,7 +2085,7 @@ void HtnGoalResolver::RuleRetractAll(ResolveState* state)
                        // We only remove facts, so skip rules
                        // Don't bother if they are not "equivalent" (i.e. the name and term count doesn't match)
                        // because it can't unify
-                       if(item.IsFact() && (item.head()->isEquivalentCompoundTerm(term)))
+                       if(item.IsFact() && (item.head()->isEquivalentCompoundTerm(term.get())))
                        {
                            shared_ptr<UnifierType> sub = HtnGoalResolver::Unify(termFactory, item.head(), term);
                            
@@ -2650,7 +2647,7 @@ shared_ptr<UnifierType> HtnGoalResolver::Unify(HtnTermFactory *factory, shared_p
             // X && Y are identical constants or Variables
             continue;
         }
-        else if(x->isEquivalentCompoundTerm(y))
+        else if(x->isEquivalentCompoundTerm(y.get()))
         {
             // X is f(X1...,Xn) and Y is f(Y1...,Yn) for some functor f and n > 0
             // push Xi = Yi , i=1...n, on the stack

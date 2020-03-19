@@ -50,7 +50,7 @@ void HtnCompiler::CheckMethodForLoop(HtnMethod *method, vector<string> &stack, s
             m_domain->AllMethods([&](HtnMethod *method)
                {
                    shared_ptr<HtnTerm> foundHead = method->head();
-                   if(foundHead->isEquivalentCompoundTerm(subtask))
+                   if(foundHead->isEquivalentCompoundTerm(subtask.get()))
                    {
                        // We found at least one method that matches
                        foundTask = true;
@@ -107,7 +107,7 @@ void HtnCompiler::CheckMethodForLoop(HtnMethod *method, vector<string> &stack, s
                 m_domain->AllOperators([&](HtnOperator *op)
                     {
                         shared_ptr<HtnTerm> foundHead = op->head();
-                        if(foundHead->isEquivalentCompoundTerm(subtask))
+                        if(foundHead->isEquivalentCompoundTerm(subtask.get()))
                         {
                             foundTask = true;
                             return false;

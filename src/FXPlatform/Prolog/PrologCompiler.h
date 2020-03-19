@@ -192,7 +192,7 @@ protected:
                     m_state->AllRules([&](const HtnRule &potentialRule)
                      {
                          shared_ptr<HtnTerm> foundHead = potentialRule.head();
-                         if(foundHead->isEquivalentCompoundTerm(term))
+                         if(foundHead->isEquivalentCompoundTerm(term.get()))
                          {
                              foundRule = true;
                              return CheckRuleForLoopStackCheck(resolver, foundHead->name(), foundHead->arity(), potentialRule.tail(), stack, loops, false);

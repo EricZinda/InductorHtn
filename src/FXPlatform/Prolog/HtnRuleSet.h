@@ -23,6 +23,51 @@ class HtnRuleSet : public std::enable_shared_from_this<HtnRuleSet>
 public:
     HtnRuleSet() : m_dynamicSize(sizeof(HtnRuleSet)), m_factsOrder(0), m_sharedRules(std::shared_ptr<HtnSharedRules>(new HtnSharedRules())) {}
     void AddRule(std::shared_ptr<HtnTerm> head, std::vector<std::shared_ptr<HtnTerm>> m_tail);
+
+    // Needs to return all the rules in the order they were added (i.e. order they were declared)
+    // Also this needs to be very quick since it is called often
+    template<class Function>
+    void AllRulesThatCouldUnify(HtnTerm *targetTerm, Function func) const
+    {
+        // Go through all rules in the shared ruleset
+        for(HtnSharedRules::RulesType::const_iterator ruleIter = m_sharedRules->allRules().begin(); ruleIter != m_sharedRules->allRules().end(); ++ruleIter)
+        {
+            // if this rule is a fact it might have been deleted
+            if(ruleIter->IsFact())
+            {
+                FactsDiffType::const_iterator found = m_factsDiff.find(ruleIter->head()->GetUniqueID());
+                if(found != m_factsDiff.end())
+                {
+                    if(!found->second.isAdd)
+                    {
+                        // fact was deleted
+                        continue;
+                    }
+                    else
+                    {
+                        // Rule was deleted and added, thus it should properly show up later in the m_factsDiff loop
+                        // since it is no longer from the original document
+                        continue;
+                    }
+                }
+            }
+            
+            if(CanPotentiallyUnify(targetTerm, ruleIter->head().get()))
+            {
+                if(!func(*ruleIter)) { break; }
+            }
+        }
+        
+        // Go through all the currently active additions in the order they were added
+        for(const FactsAdditionsType::value_type &item : m_factAdditions)
+        {
+            if(CanPotentiallyUnify(targetTerm, item.second->head().get()))
+            {
+                if(!func(*item.second)) { break; }
+            }
+        }
+    }
+    
     // Needs to return all the rules in the order they were added (i.e. order they were declared)
     // Also this needs to be very quick since it is called often
     template<class Function>
@@ -60,6 +105,7 @@ public:
             if(!func(*item.second)) { break; }
         }
     }
+    bool CanPotentiallyUnify(const HtnTerm *term, const HtnTerm *ruleHead) const;
     void ClearAll();
     std::shared_ptr<HtnRuleSet> CreateNextState(HtnTermFactory *factory, const std::vector<std::shared_ptr<HtnTerm>> &factsToRemove, const std::vector<std::shared_ptr<HtnTerm>> &factsToAdd);
     std::shared_ptr<HtnRuleSet> CreateSharedRulesCopy();

@@ -8,6 +8,7 @@
 
 #ifndef HtnRule_hpp
 #define HtnRule_hpp
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -31,7 +32,7 @@ public:
     {
         return m_tail.size() == 0;
     }
-    std::shared_ptr<HtnRule> MakeVariablesUnique(HtnRuleSet *prog, HtnTermFactory *factory, const std::string &uniquifier) const;
+    std::shared_ptr<HtnRule> MakeVariablesUnique(HtnTermFactory *factory, const std::string &uniquifier, std::map<std::string, std::shared_ptr<HtnTerm>> &variableMap, bool justDontCareVariables = false) const;
     std::string ToString() const;
     std::string ToStringProlog() const;
 

@@ -447,28 +447,35 @@ HtnTerm::HtnTermID HtnTerm::GetUniqueID() const
     return reinterpret_cast<HtnTermID>(this);
 }
 
-shared_ptr<HtnTerm> HtnTerm::MakeVariablesUnique(HtnTermFactory *factory, bool onlyDontCareVariables, const string &uniquifier, int *dontCareCount)
+shared_ptr<HtnTerm> HtnTerm::MakeVariablesUnique(HtnTermFactory *factory, bool onlyDontCareVariables, const string &uniquifier, int *dontCareCount, std::map<std::string, std::shared_ptr<HtnTerm>> &variableMap)
 {
     // Make sure we are not intermixing terms from different factories
-    FailFastAssertDesc(factory != nullptr && this->m_factory.lock().get() == factory, ("Term comes from different factory: " + this->ToString()).c_str());
-
+    // Too expensive to have in retail
+    FXDebugAssert(factory != nullptr && this->m_factory.lock().get() == factory);
+    
     if(this->isVariable())
     {
-		if(this->name() == "_")
-		{
-			// These cannot match each other so they can't use the same uniquifier
-			shared_ptr<HtnTerm> result = factory->CreateVariable(uniquifier + name() + lexical_cast<string>(*dontCareCount));
-			(*dontCareCount) = (*dontCareCount) + 1;
-			return result;
-		}
+        const string &variableName = this->name();
+        if(variableName[0] == '_')
+        {
+            // These cannot match each other so they can't use the same uniquifier
+            // make sure they continue to start with "_" (illegal for a prolog name) so we can tell if they
+            // are anonymous in rules
+            shared_ptr<HtnTerm> result = factory->CreateVariable("_" + uniquifier + variableName + lexical_cast<std::string>(*dontCareCount));
+            variableMap[variableName] = result;
+            (*dontCareCount) = (*dontCareCount) + 1;
+            return result;
+        }
         else if(onlyDontCareVariables)
         {
             return this->shared_from_this();
         }
-		else
-		{
-			return factory->CreateVariable(uniquifier + name());
-		}
+        else
+        {
+            shared_ptr<HtnTerm> newVariable = factory->CreateVariable(uniquifier + variableName);
+            variableMap[variableName] = newVariable;
+            return newVariable;
+        }
     }
     else if(this->isConstant())
     {
@@ -481,7 +488,7 @@ shared_ptr<HtnTerm> HtnTerm::MakeVariablesUnique(HtnTermFactory *factory, bool o
         for(vector<shared_ptr<HtnTerm>>::const_iterator argIter = m_arguments.begin(); argIter != m_arguments.end(); ++argIter)
         {
             shared_ptr<HtnTerm> term = *argIter;
-            newArguments.push_back(term->MakeVariablesUnique(factory, false, uniquifier, dontCareCount));
+            newArguments.push_back(term->MakeVariablesUnique(factory, onlyDontCareVariables, uniquifier, dontCareCount, variableMap));
         }
         
         return factory->CreateFunctor(*m_namePtr, newArguments);
@@ -537,6 +544,78 @@ bool HtnTerm::operator==(const HtnTerm &other) const
     else
     {
         return false;
+    }
+}
+
+shared_ptr<HtnTerm> HtnTerm::RemovePrefixFromVariables(HtnTermFactory *factory, const string &prefix)
+{
+    // Make sure we are not intermixing terms from different factories
+    // Too expensive to have in retail
+    FXDebugAssert(factory != nullptr && this->m_factory.lock().get() == factory);
+    if(this->isVariable())
+    {
+        const string &variableName = this->name();
+        int pos = variableName.find(prefix);
+        if(pos == 0)
+        {
+             return factory->CreateVariable(variableName.substr(prefix.size()));
+        }
+        else
+        {
+            return this->shared_from_this();
+        }
+    }
+    else if(this->isConstant())
+    {
+        return this->shared_from_this();
+    }
+    else
+    {
+        // This is a functor
+        vector<shared_ptr<HtnTerm>> newArguments;
+        for(vector<shared_ptr<HtnTerm>>::const_iterator argIter = m_arguments.begin(); argIter != m_arguments.end(); ++argIter)
+        {
+            shared_ptr<HtnTerm> term = *argIter;
+            newArguments.push_back(term->RemovePrefixFromVariables(factory, prefix));
+        }
+        
+        return factory->CreateFunctor(*m_namePtr, newArguments);
+    }
+}
+
+shared_ptr<HtnTerm> HtnTerm::RenameVariables(HtnTermFactory *factory, std::map<std::string, std::shared_ptr<HtnTerm>> variableMap)
+{
+    // Make sure we are not intermixing terms from different factories
+    // Too expensive to have in retail
+    FXDebugAssert(factory != nullptr && this->m_factory.lock().get() == factory);
+    if(this->isVariable())
+    {
+        const string &variableName = this->name();
+        auto found = variableMap.find(variableName);
+        if(found != variableMap.end())
+        {
+            return found->second;
+        }
+        else
+        {
+            return this->shared_from_this();
+        }
+    }
+    else if(this->isConstant())
+    {
+        return this->shared_from_this();
+    }
+    else
+    {
+        // This is a functor
+        vector<shared_ptr<HtnTerm>> newArguments;
+        for(vector<shared_ptr<HtnTerm>>::const_iterator argIter = m_arguments.begin(); argIter != m_arguments.end(); ++argIter)
+        {
+            shared_ptr<HtnTerm> term = *argIter;
+            newArguments.push_back(term->RenameVariables(factory, variableMap));
+        }
+        
+        return factory->CreateFunctor(*m_namePtr, newArguments);
     }
 }
 

@@ -11,15 +11,15 @@
 #include "HtnTerm.h"
 using namespace std;
 
-shared_ptr<HtnRule> HtnRule::MakeVariablesUnique(HtnRuleSet *prog, HtnTermFactory *factory, const string &uniquifier) const
+shared_ptr<HtnRule> HtnRule::MakeVariablesUnique(HtnTermFactory *factory, const string &uniquifier, std::map<std::string, std::shared_ptr<HtnTerm>> &variableMap, bool onlyDontCareVariables) const
 {
 	// Don't care variables can't match
 	int dontCareCount = 0;
-    shared_ptr<HtnTerm> newHead = this->head()->MakeVariablesUnique(factory, false, uniquifier, &dontCareCount);
+    shared_ptr<HtnTerm> newHead = this->head()->MakeVariablesUnique(factory, onlyDontCareVariables, uniquifier, &dontCareCount, variableMap);
     vector<shared_ptr<HtnTerm>> newTail;
     for(shared_ptr<HtnTerm> term : this->tail())
     {
-        newTail.push_back(term->MakeVariablesUnique(factory, false, uniquifier, &dontCareCount));
+        newTail.push_back(term->MakeVariablesUnique(factory, onlyDontCareVariables, uniquifier, &dontCareCount, variableMap));
     }
     
     shared_ptr<HtnRule> newRule = shared_ptr<HtnRule>(new HtnRule(newHead, newTail));

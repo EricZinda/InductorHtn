@@ -9,6 +9,7 @@
 #ifndef HtnTerm_hpp
 #define HtnTerm_hpp
 #include <cmath>
+#include <map>
 #include <memory>
 #include <set>
 #include <sstream>
@@ -65,10 +66,12 @@ public:
     void SetInterned() { m_isInterned = true; };
     bool isTrue() const { return !m_isVariable && *m_namePtr == "true"; }
     bool isVariable() const { return m_isVariable; }
-    std::shared_ptr<HtnTerm> MakeVariablesUnique(HtnTermFactory *factory, bool onlyDontCareVariables, const std::string &uniquifier, int* dontCareCount);
+    std::shared_ptr<HtnTerm> MakeVariablesUnique(HtnTermFactory *factory, bool onlyDontCareVariables, const std::string &uniquifier, int* dontCareCount, std::map<std::string, std::shared_ptr<HtnTerm>> &variableMap);
     std::string name() const { return m_isVariable ? m_namePtr->substr(1, m_namePtr->size() - 1) : *m_namePtr; }
     bool OccursCheck(std::shared_ptr<HtnTerm> variable) const;
     bool operator==(const HtnTerm &other) const;
+    std::shared_ptr<HtnTerm> RemovePrefixFromVariables(HtnTermFactory *factory, const std::string &prefix);
+    std::shared_ptr<HtnTerm> RenameVariables(HtnTermFactory *factory, std::map<std::string, std::shared_ptr<HtnTerm>> variableMap);
     std::shared_ptr<HtnTerm> ResolveArithmeticTerms(HtnTermFactory *factory);
     std::shared_ptr<HtnTerm> SubstituteTermForVariable(HtnTermFactory *factory, std::shared_ptr<HtnTerm> newTerm, std::shared_ptr<HtnTerm> existingVariable);
     // Compares using prolog comparison rules

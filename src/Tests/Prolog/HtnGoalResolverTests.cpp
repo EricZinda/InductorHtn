@@ -92,7 +92,7 @@ SUITE(HtnGoalResolverTests)
         testState = "";
 
         compiler->Clear();
-        goals = "goals(=(CreateOrEval, create), =(E9001, id9007), d_thing(X9002), d_pronoun(you, X9003), d_see_v_1(E9001, X9003, X9002, CreateOrEval)).";
+        goals = "goals(=(CreateOrEval, create), d_the_q(conj(d_noun(crystal, X9410), conj(isInstance(X9410)))), d_noun(place, X9411), d_loc_nonsp(E9409, X9410, X9411, CreateOrEval)).";
         CHECK(compiler->Compile(example + sharedState + testState + goals));
         unifier = compiler->SolveGoals(&resolver, 1000000, nullptr, &furthestFailureIndex, &farthestFailureContext);
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
@@ -169,7 +169,7 @@ SUITE(HtnGoalResolverTests)
     
     TEST(HtnGoalResolverSquareScenarioTest)
     {
-        //SetTraceFilter((int) SystemTraceType::Solver | (int) SystemTraceType::System, TraceDetail::Diagnostic);
+//        SetTraceFilter((int) SystemTraceType::Solver | (int) SystemTraceType::System, TraceDetail::Diagnostic);
 
         HtnGoalResolver resolver;
         shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
@@ -743,7 +743,7 @@ SUITE(HtnGoalResolverTests)
         unifier = compiler->SolveGoals();
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
         CHECK_EQUAL(finalUnifier, "(())");
-        CHECK_EQUAL(out.str(), "itemsInBag(?X)");
+        CHECK_EQUAL(out.str(), "itemsInBag(?orig*X)");
         std::cout.rdbuf(coutbuf); //reset to standard output again
     }
     
@@ -757,8 +757,8 @@ SUITE(HtnGoalResolverTests)
 		string goals;
 		string finalUnifier;
 		shared_ptr<vector<UnifierType>> unifier;
-
-//        SetTraceFilter((int)SystemTraceType::Solver, TraceDetail::Diagnostic);
+//
+////        SetTraceFilter((int)SystemTraceType::Solver, TraceDetail::Diagnostic);
         // ***** Make sure the same variables in terms of a conjunction get mapped to the same renamed variables
         compiler->Clear();
         testState = string() +
@@ -772,7 +772,7 @@ SUITE(HtnGoalResolverTests)
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
         CHECK_EQUAL(finalUnifier, "((?X = Name1))");
 
-		// ***** Make sure the same variables get mapped to the same renamed variables 
+		// ***** Make sure the same variables get mapped to the same renamed variables
 		compiler->Clear();
 		testState = string() +
 			"itemsInBag(Name1, Name1). \r\n" +
@@ -782,7 +782,7 @@ SUITE(HtnGoalResolverTests)
 		unifier = compiler->SolveGoals();
 		finalUnifier = HtnGoalResolver::ToString(unifier.get());
 		CHECK_EQUAL(finalUnifier, "((?X = Name1))");
-	
+
 		// ***** dontcare variables match anything and aren't returned
 		compiler->Clear();
 		testState = string() +
@@ -881,7 +881,7 @@ SUITE(HtnGoalResolverTests)
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
         CHECK_EQUAL(finalUnifier, "(())");
         expectedOut = std::stringstream();
-        expectedOut << "item(a)" << endl << "item(b)" << endl << "item(?X)" << endl;
+        expectedOut << "item(a)" << endl << "item(b)" << endl << "item(?orig*X)" << endl;
         string temp = out.str();
         CHECK_EQUAL(out.str(), expectedOut.str());
         std::cout.rdbuf(coutbuf); //reset to standard output again

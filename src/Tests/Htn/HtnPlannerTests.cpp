@@ -1056,8 +1056,8 @@ SUITE(HtnPlannerTests)
         string sharedState;
         string goals;
         
-        //        SetTraceFilter((int) SystemTraceType::Solver | (int) SystemTraceType::Planner, TraceDetail::Diagnostic);
-        //        SetTraceLevelOfDetail(TraceDetail::Diagnostic);
+//                SetTraceFilter((int) SystemTraceType::Solver | (int) SystemTraceType::Planner, TraceDetail::Diagnostic);
+//                SetTraceLevelOfDetail(TraceDetail::Diagnostic);
         
         // Original(ish) data from: http://www.cs.umd.edu/projects/shop/description.html
         //        ";;; To have enough money for a taxi, we need at least $1.50 + $1 for each mile to be traveled.\r\n" +
@@ -1130,8 +1130,7 @@ SUITE(HtnPlannerTests)
         finalPlan = HtnTerm::ToString((*result)[0]->first);
         CHECK_EQUAL(finalPlan, "(wait-for(bus3,downtown), set-cash(12,11.000000000), ride(bus3,downtown,suburb))");
         CHECK_EQUAL(finalFacts,  "distance(downtown,park,2) => ,distance(downtown,uptown,8) => ,distance(downtown,suburb,12) => ,at-taxi-stand(taxi1,downtown) => ,at-taxi-stand(taxi2,downtown) => ,bus-route(bus1,downtown,park) => ,bus-route(bus2,downtown,uptown) => ,bus-route(bus3,downtown,suburb) => ,weather-is(good) => ,have-cash(11.000000000) => ,at(suburb) => ,at(bus3,suburb) => ");
-        
-        
+                
         // **** Next Test
         state = shared_ptr<HtnRuleSet>(new HtnRuleSet()); planner->ClearAll();
         compiler = shared_ptr<HtnCompiler>(new HtnCompiler(factory.get(), state.get(), planner.get()));

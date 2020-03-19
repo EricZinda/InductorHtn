@@ -18,6 +18,7 @@
 #include <stack>
 #include <locale> 
 const int indentSpaces = 11;
+const string initialVariablePrefix = "orig*";
 
 #define Trace0(status, trace, indent, fullTrace) \
 TraceString("HtnGoalResolver::Resolve " + string((indent) * indentSpaces, ' ') + status + trace, \
@@ -299,6 +300,20 @@ void ResolveNode::PushStandaloneResolve(ResolveState *state, shared_ptr<TermSetT
     continuePoint = continuePointArg;
 }
 
+vector<shared_ptr<HtnTerm>> ResolveState::ReplaceInitialVariables(HtnTermFactory *termFactory, const vector<shared_ptr<HtnTerm>> &initialGoals)
+{
+    vector<shared_ptr<HtnTerm>> replacedGoals;
+    int dontCareCount = 0;
+    std::map<std::string, std::shared_ptr<HtnTerm>> variableMap;
+    for(auto item : initialGoals)
+    {
+        shared_ptr<HtnTerm> current = item->MakeVariablesUnique(termFactory, false, initialVariablePrefix, &dontCareCount, variableMap);
+        replacedGoals.push_back(current);
+    }
+    
+    return replacedGoals;
+}
+
 ResolveState::ResolveState(HtnTermFactory *termFactoryArg, HtnRuleSet *progArg, const vector<shared_ptr<HtnTerm>> &initialResolventArg, int initialIndentArg, int memoryBudgetArg) :
     collectAllSolutions(false),
     deepestFailure(-1),
@@ -307,7 +322,6 @@ ResolveState::ResolveState(HtnTermFactory *termFactoryArg, HtnRuleSet *progArg, 
     farthestFailureOriginalGoalIndex(-1),
     fullTrace(false),
     highestMemoryUsed(0),
-    initialGoals(shared_ptr<vector<shared_ptr<HtnTerm>>>(new vector<shared_ptr<HtnTerm>>(initialResolventArg))),
     initialIndent(initialIndentArg),
     memoryBudget(memoryBudgetArg),
     prog(progArg),
@@ -318,9 +332,15 @@ ResolveState::ResolveState(HtnTermFactory *termFactoryArg, HtnRuleSet *progArg, 
     termMemoryUsed(0),
     uniquifier(0)
 {
+    // Replace the variable names used in the initial goals with guaranteed unique ones since we do a unification with rules *before*
+    // renaming them and this avoids improper matching
+    // Also, any "_" variables need to be replaced by unique names so they don't get treated as the same variable (called "_") when we resolve.
+    initialGoals = shared_ptr<vector<shared_ptr<HtnTerm>>>(new vector<shared_ptr<HtnTerm>>(ReplaceInitialVariables(termFactoryArg, initialResolventArg)));
+
     // Start with the initial node on the stack
 	shared_ptr<vector<shared_ptr<HtnTerm>>> resolvent = shared_ptr<vector<shared_ptr<HtnTerm>>>(new vector<shared_ptr<HtnTerm>>());
-	ResolveNode::AddNewGoalsToResolvent(termFactory, initialResolventArg.rbegin(), initialResolventArg.rend(), resolvent, &uniquifier);
+    
+	ResolveNode::AddNewGoalsToResolvent(termFactory, initialGoals->rbegin(), initialGoals->rend(), resolvent, &uniquifier);
     resolveStack->push_back(ResolveNode::CreateInitialNode(*resolvent, {}));
 }
 
@@ -410,6 +430,17 @@ int64_t ResolveState::RecordMemoryUsage(int64_t &initialTermMemory, int64_t &ini
     return totalMemoryUsed;
 }
 
+
+void ResolveState::RecoverInitialVariables(HtnTermFactory *termFactory, UnifierType &unifier)
+{
+    // Fix variables in solution to match their initial names
+    for(UnifierItemType &assignment : unifier)
+    {
+        assignment.first = assignment.first->RemovePrefixFromVariables(termFactory, initialVariablePrefix);
+        assignment.second = assignment.second->RemovePrefixFromVariables(termFactory, initialVariablePrefix);
+    }
+}
+
 shared_ptr<UnifierType> ResolveState::SimplifySolution(const UnifierType &solution, vector<shared_ptr<HtnTerm>> &goals)
 {
     // Hard-won knowledge: In case of success, the final substitution, is the composition
@@ -439,12 +470,15 @@ shared_ptr<UnifierType> ResolveState::SimplifySolution(const UnifierType &soluti
     shared_ptr<UnifierType> simplifiedSolution = shared_ptr<UnifierType>(new UnifierType());
     for(UnifierItemType item : solution)
     {
-        if(item.first->name() != "_" && variables.find(item.first->name()) != variables.end())
+        if(item.first->name()[0] != '_' && variables.find(item.first->name()) != variables.end())
         {
             simplifiedSolution->push_back(item);
         }
     }
     
+    // Fix variables in solution to match their initial names
+    RecoverInitialVariables(termFactory, *simplifiedSolution);
+
 //    Trace3("DEBUG      ", " simplified: {0}, terms: {1}, original: {2}", 0, true, HtnGoalResolver::ToString(*simplifiedSolution.get()), HtnTerm::ToString(goals), HtnGoalResolver::ToString(solution));
     return simplifiedSolution;
 }
@@ -561,24 +595,29 @@ shared_ptr<vector<RuleBindingType>> HtnGoalResolver::FindAllRulesThatUnify(HtnTe
                 termFactory->outOfMemory(true);
                 return false;
             }
-            
-            // Don't bother if they are not "equivalent" (i.e. the name and term count doesn't match)
-            // because it can't unify
+        
             if(item.head()->isEquivalentCompoundTerm(goal) || (goal->isConstant() && item.head()->isConstant()))
             {
+                // Unify
                 foundRule = true;
-                
-                // Make the variables in the rule unique, make sure they continue to start with "_" (illegal for a prolog name) so we can tell if they
-                // are anonymous in rules
-                shared_ptr<HtnRule> currentRule = item.MakeVariablesUnique(prog, termFactory, "_" + goal->name() + lexical_cast<string>(*uniquifier) + "_" );
-                *uniquifier = (*uniquifier) + 1;
-                
-                // Then unify
-                shared_ptr<UnifierType> sub = HtnGoalResolver::Unify(termFactory, currentRule->head(), goal);
-                
-                if(sub != nullptr)
+                shared_ptr<UnifierType> substitutions = HtnGoalResolver::Unify(termFactory, item.head(), goal);
+                if(substitutions != nullptr)
                 {
-                    foundRules->push_back(RuleBindingType(currentRule, *sub));
+                    // IF the unification works, make the variables in the rule unique,
+                    // since this is expensive in the inner loop
+                    string uniquifierString = goal->name() + lexical_cast<string>(*uniquifier) + "_";
+                    std::map<std::string, std::shared_ptr<HtnTerm>> variableMap;
+                    shared_ptr<HtnRule> currentRule = item.MakeVariablesUnique(termFactory, uniquifierString, variableMap);
+                    *uniquifier = (*uniquifier) + 1;
+
+                    // Also need to fix up the substitutions to use the new values since we renamed them
+                    for(UnifierItemType &item : *substitutions)
+                    {
+                        item.first = item.first->RenameVariables(termFactory, variableMap);
+                        item.second = item.second->RenameVariables(termFactory, variableMap);
+                    }
+
+                    foundRules->push_back(RuleBindingType(currentRule, *substitutions));
                     memoryUsed += sizeof(RuleBindingType) + foundRules->back().second.size() * sizeof(UnifierItemType);
                 }
             }
@@ -679,20 +718,6 @@ bool HtnGoalResolver::IsGround(UnifierType *unifier)
     return true;
 }
 
-vector<shared_ptr<HtnTerm>> HtnGoalResolver::ReplaceDontCareVariables(HtnTermFactory *termFactory, const vector<shared_ptr<HtnTerm>> &initialGoals)
-{
-    vector<shared_ptr<HtnTerm>> replacedGoals;
-    string uniquifier;
-    int dontCareCount = 0;
-    for(auto item : initialGoals)
-    {
-        shared_ptr<HtnTerm> current = item->MakeVariablesUnique(termFactory, true, uniquifier, &dontCareCount);
-        replacedGoals.push_back(current);
-    }
-    
-    return replacedGoals;
-}
-
 // returns null if no solution
 // returns a single empty UnifierType for "true" solution
 // otherwise returns an array of UnifierTypes for all the solutions
@@ -700,9 +725,7 @@ shared_ptr<vector<UnifierType>> HtnGoalResolver::ResolveAll(HtnTermFactory *term
 {
     Trace3("ALL BEGIN  ", "goals:{0}, termStrings:{1}, termOther:{2}", initialIndent, false, HtnTerm::ToString(initialGoals), termFactory->stringSize(), termFactory->otherAllocationSize());
 
-    // We keep the variable names the user choose in the initial goals because them returned with the names they wanted when we are done
-    // However, any "_" variables need to be replaced by unique names so they don't get treated as the same variable (called "_") when we resolve.
-    shared_ptr<ResolveState> state = shared_ptr<ResolveState>(new ResolveState(termFactory, prog, ReplaceDontCareVariables(termFactory, initialGoals), initialIndent, memoryBudget));
+    shared_ptr<ResolveState> state = shared_ptr<ResolveState>(new ResolveState(termFactory, prog, initialGoals, initialIndent, memoryBudget));
     shared_ptr<vector<UnifierType>> solutions = shared_ptr<vector<UnifierType>>(new vector<UnifierType>());
     while(true)
     {
@@ -750,7 +773,7 @@ shared_ptr<vector<UnifierType>> HtnGoalResolver::ResolveAll(HtnTermFactory *term
                state->farthestFailureOriginalGoalIndex >= 0 ? initialGoals[state->farthestFailureOriginalGoalIndex]->ToString() : "",
                HtnTerm::ToString(state->farthestFailureContext));
     }
-    
+        
     // Get a read on memory after we release state which is what it will look like when we return
     state = nullptr;
     
@@ -1434,12 +1457,17 @@ void HtnGoalResolver::RuleDistinct(ResolveState *state)
                         map<vector<shared_ptr<HtnTerm>>, int, HtnTermVectorComparer> items;
                         
                         // Each vector representing a solution has the same variable in the same position
-                        // Assign indices for all the variables
+                        // Assign indices for all the variables, *except* for don't care variables since we
+                        // don't care
                         UnifierType &binding = (*solutions)[0];
                         map<string, int> variablePositions;
                         for(UnifierItemType item : binding)
                         {
-                            variablePositions[item.first->name()] = variablePositions.size();
+                            string varName = item.first->name();
+                            if(varName[0] != '_')
+                            {
+                                variablePositions[varName] = variablePositions.size();
+                            }
                         }
                             
                         // Now add each solution if they are unique
@@ -1450,7 +1478,11 @@ void HtnGoalResolver::RuleDistinct(ResolveState *state)
                             UnifierType &binding = (*solutions)[index];
                             for(UnifierItemType item : binding)
                             {
-                                solutionVector[variablePositions[item.first->name()]] = item.second;
+                                string varName = item.first->name();
+                                if(varName[0] != '_')
+                                {
+                                    solutionVector[variablePositions[varName]] = item.second;
+                                }
                             }
                             
                             if(items.find(solutionVector) == items.end())
@@ -1762,6 +1794,7 @@ void HtnGoalResolver::RuleIs(ResolveState *state)
                         UnifierType exprUnifier( { UnifierItemType(lValue, exprResult) } );
                         resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, exprUnifier, &(state->uniquifier)));
                         currentNode->continuePoint = ResolveContinuePoint::Return;
+                        Trace2("           ", "is() succeeded {0} = {1}}", state->initialIndent + resolveStack->size(), state->fullTrace, lValue->ToString(), exprResult->ToString());
                     }
                     else
                     {
@@ -1774,6 +1807,7 @@ void HtnGoalResolver::RuleIs(ResolveState *state)
                                 // Nothing to process on children so no special return handling
                                 resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, {}, &(state->uniquifier)));
                                 currentNode->continuePoint = ResolveContinuePoint::Return;
+                                Trace2("           ", "is() succeeded {0} == {1}", state->initialIndent + resolveStack->size(), state->fullTrace, lValueResult->ToString(), exprResult->ToString());
                             }
                             else
                             {

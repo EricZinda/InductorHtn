@@ -19,6 +19,7 @@ class ResolveState;
 class HtnRuleSet;
 class HtnTerm;
 
+// UnifierItemType means assignment where pair.first = pair.second
 typedef std::pair<std::shared_ptr<HtnTerm>, std::shared_ptr<HtnTerm>> UnifierItemType;
 typedef std::vector<UnifierItemType> UnifierType;
 typedef std::pair<std::shared_ptr<HtnRule>, UnifierType> RuleBindingType;
@@ -75,7 +76,6 @@ public:
     static std::shared_ptr<UnifierType> Unify(HtnTermFactory *factory, std::shared_ptr<HtnTerm> term1, std::shared_ptr<HtnTerm> term2);
 
 private:
-    static std::vector<std::shared_ptr<HtnTerm>> ReplaceDontCareVariables(HtnTermFactory *termFactory, const std::vector<std::shared_ptr<HtnTerm>> &initialGoals);
     static void RuleAggregate(ResolveState *state);
 	static void RuleAssert(ResolveState* state);
     static void RuleAtomConcat(ResolveState* state);
@@ -261,7 +261,9 @@ public:
     std::string GetStackString();
     int64_t RecordMemoryUsage(int64_t &initialTermMemory, int64_t &initialRuleSetMemory);
     void RecordFailure(std::shared_ptr<HtnTerm> goal, std::shared_ptr<ResolveNode> currentNode);
-    static std::shared_ptr<UnifierType> SimplifySolution(const UnifierType &solution, std::vector<std::shared_ptr<HtnTerm>> &goals);
+    static void RecoverInitialVariables(HtnTermFactory *termFactory, UnifierType &unifier);
+    static std::vector<std::shared_ptr<HtnTerm>> ReplaceInitialVariables(HtnTermFactory *termFactory, const std::vector<std::shared_ptr<HtnTerm>> &initialGoals);
+    std::shared_ptr<UnifierType> SimplifySolution(const UnifierType &solution, std::vector<std::shared_ptr<HtnTerm>> &goals);
 
     int64_t dynamicSize()
     {

@@ -87,7 +87,7 @@ int64_t HtnTerm::dynamicSize()
 shared_ptr<HtnTerm> HtnTerm::Eval(HtnTermFactory *factory)
 {
     // Make sure we are not intermixing terms from different factories
-    FailFastAssertDesc(this->m_factory.lock().get() == factory, ("Term comes from wrong factory: " + this->ToString()).c_str());
+    FXDebugAssert(this->m_factory.lock().get() == factory);
 
     if(isVariable())
     {
@@ -498,7 +498,7 @@ shared_ptr<HtnTerm> HtnTerm::MakeVariablesUnique(HtnTermFactory *factory, bool o
 bool HtnTerm::OccursCheck(shared_ptr<HtnTerm> variable) const
 {
     // Make sure we are not intermixing terms from different factories
-    FailFastAssert(this->m_factory.lock() == variable->m_factory.lock());
+    FXDebugAssert(this->m_factory.lock() == variable->m_factory.lock());
 
     if(isVariable() && *this == *variable)
     {
@@ -521,11 +521,16 @@ bool HtnTerm::OccursCheck(shared_ptr<HtnTerm> variable) const
 bool HtnTerm::operator==(const HtnTerm &other) const
 {
     // Make sure we are not intermixing terms from different factories
-    FailFastAssert(this->m_factory.lock() == other.m_factory.lock());
+    FXDebugAssert(this->m_factory.lock() == other.m_factory.lock());
 
     if(m_isVariable == other.m_isVariable &&
        m_namePtr == other.m_namePtr)
     {
+        if(m_isVariable)
+        {
+            return true;
+        }
+        
         if(m_arguments.size() != other.m_arguments.size())
         {
             return false;
@@ -622,7 +627,7 @@ shared_ptr<HtnTerm> HtnTerm::RenameVariables(HtnTermFactory *factory, std::map<s
 shared_ptr<HtnTerm> HtnTerm::ResolveArithmeticTerms(HtnTermFactory *factory)
 {
     // Make sure we are not intermixing terms from different factories
-    FailFastAssert(factory != nullptr && this->m_factory.lock().get() == factory);
+    FXDebugAssert(factory != nullptr && this->m_factory.lock().get() == factory);
 
     if(!isCompoundTerm())
     {
@@ -677,10 +682,12 @@ public:
     HtnTerm *m_term;
 };
 
+
 shared_ptr<HtnTerm> HtnTerm::SubstituteTermForVariable(HtnTermFactory *factory, shared_ptr<HtnTerm> newTerm, shared_ptr<HtnTerm> existingVariable)
 {
     // Make sure we are not intermixing terms from different factories
-    FailFastAssert(this->m_factory.lock().get() == factory && newTerm->m_factory.lock().get() == factory && existingVariable->m_factory.lock().get() == factory);
+    FXDebugAssert(this->m_factory.lock().get() == factory && newTerm->m_factory.lock().get() == factory && existingVariable->m_factory.lock().get() == factory);
+    FXDebugAssert(existingVariable->isVariable());
     
     vector<SubstituteStackFrame> stack;
     stack.push_back(SubstituteStackFrame(this));
@@ -692,7 +699,7 @@ shared_ptr<HtnTerm> HtnTerm::SubstituteTermForVariable(HtnTermFactory *factory, 
         
         if(current.m_term->isVariable())
         {
-            if(*current.m_term == *existingVariable)
+            if(current.m_term->nameEqualTo(*existingVariable))
             {
                 current.m_returnValue = newTerm;
                 last = current;
@@ -736,7 +743,7 @@ shared_ptr<HtnTerm> HtnTerm::SubstituteTermForVariable(HtnTermFactory *factory, 
             else
             {
                 // Should have been a variable, constant or functor...
-                FailFastAssert(false);
+                FXDebugAssert(false);
             }
         }
     }
@@ -755,7 +762,7 @@ shared_ptr<HtnTerm> HtnTerm::SubstituteTermForVariable(HtnTermFactory *factory, 
 int HtnTerm::TermCompare(const HtnTerm &other)
 {
     // Make sure we are not intermixing terms from different factories
-    FailFastAssert(this->m_factory.lock() == other.m_factory.lock());
+    FXDebugAssert(this->m_factory.lock() == other.m_factory.lock());
 
     HtnTermType thisType = GetTermType();
     HtnTermType otherType = other.GetTermType();
@@ -840,61 +847,61 @@ int HtnTerm::TermCompare(const HtnTerm &other)
 
 string HtnTerm::ToString(bool isInList, bool json)
 {
-        stringstream stream;
-        if(isConstant() || isVariable())
+    stringstream stream;
+    if(isConstant() || isVariable())
+    {
+        if (json)
         {
-            if (json)
-            {
-                stream << "{\"" << *m_namePtr << "\":[]}";
-            }
-            else
-            {
-                stream << *m_namePtr;
-            }
+            stream << "{\"" << *m_namePtr << "\":[]}";
         }
         else
         {
-            // If this is a list we handle specially
-            // If a child is ., print out [ and then the child
-            // If the right term is "[]" print out ] at the end
-            // .(a, .(b, []))
-            bool startedList = false;
-            if(*m_namePtr == "." && !isInList)
+            stream << *m_namePtr;
+        }
+    }
+    else
+    {
+        // If this is a list we handle specially
+        // If a child is ., print out [ and then the child
+        // If the right term is "[]" print out ] at the end
+        // .(a, .(b, []))
+        bool startedList = false;
+        if(*m_namePtr == "." && !isInList)
+        {
+            // This is the start of a list
+            startedList = true;
+            stream << "[";
+        }
+        else
+        {
+            if (json)
             {
-                // This is the start of a list
-                startedList = true;
-                stream << "[";
+                stream << "{\"" << *m_namePtr << "\":[";
             }
             else
             {
-                if (json)
-                {
-                    stream << "{\"" << *m_namePtr << "\":[";
-                }
-                else
-                {
-                    stream << *m_namePtr << "(";
-                }
-            }
-    
-            bool hasArg = false;
-            for(auto arg : m_arguments)
-            {
-                stream << (hasArg ? "," : "") << arg->ToString(startedList, json);
-                hasArg = true;
-            }
-    
-            if(startedList)
-            {
-                stream << "]";
-            }
-            else
-            {
-                stream << (json ? "]}" : ")");
+                stream << *m_namePtr << "(";
             }
         }
-    
-        return stream.str();
+
+        bool hasArg = false;
+        for(auto arg : m_arguments)
+        {
+            stream << (hasArg ? "," : "") << arg->ToString(startedList, json);
+            hasArg = true;
+        }
+
+        if(startedList)
+        {
+            stream << "]";
+        }
+        else
+        {
+            stream << (json ? "]}" : ")");
+        }
+    }
+
+    return stream.str();
 }
 
 string HtnTerm::ToString(const vector<shared_ptr<HtnTerm>> &goals, bool surroundWithParenthesis, bool json)

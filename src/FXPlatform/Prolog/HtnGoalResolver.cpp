@@ -2591,9 +2591,9 @@ shared_ptr<UnifierType> HtnGoalResolver::Unify(HtnTermFactory *factory, shared_p
 {
     if(term1 == nullptr || term2 == nullptr) return nullptr;
     
-    TraceString2("HtnGoalResolver::Unify {0}={1}",
-                 SystemTraceType::Unifier, TraceDetail::Diagnostic,
-                 term1->ToString(), term2->ToString());
+//    TraceString2("HtnGoalResolver::Unify {0}={1}",
+//                 SystemTraceType::Unifier, TraceDetail::Diagnostic,
+//                 term1->ToString(), term2->ToString());
     
     // solution.first = left side of equality, solution.second = right
     shared_ptr<UnifierType> solution = shared_ptr<UnifierType>(new UnifierType);
@@ -2606,21 +2606,21 @@ shared_ptr<UnifierType> HtnGoalResolver::Unify(HtnTermFactory *factory, shared_p
     
     while(!remainingStack.empty())
     {
-        TraceString("Solution:", SystemTraceType::Unifier, TraceDetail::Diagnostic);
-        for(pair<shared_ptr<HtnTerm>,shared_ptr<HtnTerm>> item : *solution)
-        {
-            TraceString2("...solution: {0}={1}",
-                         SystemTraceType::Unifier, TraceDetail::Diagnostic,
-                         item.first->ToString(), item.second->ToString());
-        }
-        
-        TraceString("Stack:", SystemTraceType::Unifier, TraceDetail::Diagnostic);
-        for(pair<shared_ptr<HtnTerm>,shared_ptr<HtnTerm>> item : remainingStack)
-        {
-            TraceString2("...stack: {0}={1}",
-                         SystemTraceType::Unifier, TraceDetail::Diagnostic,
-                         item.first->ToString(), item.second->ToString());
-        }
+//        TraceString("Solution:", SystemTraceType::Unifier, TraceDetail::Diagnostic);
+//        for(pair<shared_ptr<HtnTerm>,shared_ptr<HtnTerm>> item : *solution)
+//        {
+//            TraceString2("...solution: {0}={1}",
+//                         SystemTraceType::Unifier, TraceDetail::Diagnostic,
+//                         item.first->ToString(), item.second->ToString());
+//        }
+//
+//        TraceString("Stack:", SystemTraceType::Unifier, TraceDetail::Diagnostic);
+//        for(pair<shared_ptr<HtnTerm>,shared_ptr<HtnTerm>> item : remainingStack)
+//        {
+//            TraceString2("...stack: {0}={1}",
+//                         SystemTraceType::Unifier, TraceDetail::Diagnostic,
+//                         item.first->ToString(), item.second->ToString());
+//        }
         
         pair<shared_ptr<HtnTerm>, shared_ptr<HtnTerm>> current = remainingStack.back();
         remainingStack.pop_back();
@@ -2645,7 +2645,7 @@ shared_ptr<UnifierType> HtnGoalResolver::Unify(HtnTermFactory *factory, shared_p
             solution->push_back(pair<shared_ptr<HtnTerm>, shared_ptr<HtnTerm>>(y, x));
         }
         else if(((x->isVariable() && y->isVariable()) && x == y) ||
-                ((x->isConstant() && y->isConstant()) && x->name() == y->name()))
+                ((x->isConstant() && y->isConstant()) && x->nameEqualTo(*y)))
         {
             // X && Y are identical constants or Variables
             continue;
@@ -2666,17 +2666,17 @@ shared_ptr<UnifierType> HtnGoalResolver::Unify(HtnTermFactory *factory, shared_p
         else
         {
             // Fail
-            TraceString("Final Solution: FAIL", SystemTraceType::Unifier, TraceDetail::Diagnostic);
+//            TraceString("Final Solution: FAIL", SystemTraceType::Unifier, TraceDetail::Diagnostic);
             return nullptr;
         }
     }
     
-    TraceString("Final Solution:", SystemTraceType::Unifier, TraceDetail::Diagnostic);
-    for(pair<shared_ptr<HtnTerm>,shared_ptr<HtnTerm>> item : *solution)
-    {
-        TraceString2("...solution {0}={1}",
-                     SystemTraceType::Unifier, TraceDetail::Diagnostic,
-                     item.first->ToString(), item.second->ToString());
-    }
+//    TraceString("Final Solution:", SystemTraceType::Unifier, TraceDetail::Diagnostic);
+//    for(pair<shared_ptr<HtnTerm>,shared_ptr<HtnTerm>> item : *solution)
+//    {
+//        TraceString2("...solution {0}={1}",
+//                     SystemTraceType::Unifier, TraceDetail::Diagnostic,
+//                     item.first->ToString(), item.second->ToString());
+//    }
     return solution;
 }

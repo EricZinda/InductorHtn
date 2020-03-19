@@ -73,6 +73,8 @@ SUITE(HtnGoalResolverTests)
 {
     TEST(AdventureScenarioTests)
     {
+//        SetTraceFilter((int) SystemTraceType::Solver | (int) SystemTraceType::System, TraceDetail::Diagnostic);
+
         HtnGoalResolver resolver;
         shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
         shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());

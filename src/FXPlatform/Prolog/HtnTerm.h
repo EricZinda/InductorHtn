@@ -35,7 +35,7 @@ enum class HtnTermType
     Compound = 4
 };
 
-// Terms are immutable, this is required because their signature (name, argument count, argument name, etc) is used
+// Terms are immutable, this is required because their signature (name, argument count, argument name, etc) are used
 // as the primary way to find them in the HtnRuleSet.  Making them immutable means we can keep them in a map.
 // A term is variable, or a compound term which has a name and 0 or more arguments (which are also terms)
 // A compound term with no arguments is called a constant
@@ -46,6 +46,8 @@ public:
     ~HtnTerm();
     const std::vector<std::shared_ptr<HtnTerm>> &arguments() const { return m_arguments; }
     int arity() const { return (int) m_arguments.size(); }
+    // Very efficient name comparison because names are interned
+    bool nameEqualTo(HtnTerm &other) { return m_namePtr == other.m_namePtr; }
     int64_t dynamicSize();
     std::shared_ptr<HtnTerm> Eval(HtnTermFactory *factory);
     void GetAllVariables(std::vector<std::string> *result);
@@ -61,7 +63,8 @@ public:
     bool isCompoundTerm() { return arity() > 0; }
     bool isConstant() const { return !m_isVariable && m_arguments.size() == 0; }
 	bool isCut() const { return  *m_namePtr == "!";  }
-    bool isEquivalentCompoundTerm(std::shared_ptr<HtnTerm> other) { return isCompoundTerm() && other->isCompoundTerm() && arity() == other->arity() && name() == other->name(); }
+    // We can compare pointers for equivalence because names are interned
+    bool isEquivalentCompoundTerm(std::shared_ptr<HtnTerm> other) { return arity() == other->arity() && m_namePtr == other->m_namePtr; }
     bool isGround() const;
     void SetInterned() { m_isInterned = true; };
     bool isTrue() const { return !m_isVariable && *m_namePtr == "true"; }

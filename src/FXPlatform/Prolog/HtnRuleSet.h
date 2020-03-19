@@ -21,7 +21,7 @@
 class HtnRuleSet : public std::enable_shared_from_this<HtnRuleSet>
 {
 public:
-    HtnRuleSet() : m_dynamicSize(sizeof(HtnRuleSet)), m_factsOrder(0), m_sharedRules(std::shared_ptr<HtnSharedRules>(new HtnSharedRules())), m_dontCareCount(0) {}
+    HtnRuleSet() : m_dynamicSize(sizeof(HtnRuleSet)), m_factsOrder(0), m_sharedRules(std::shared_ptr<HtnSharedRules>(new HtnSharedRules())) {}
     void AddRule(std::shared_ptr<HtnTerm> head, std::vector<std::shared_ptr<HtnTerm>> m_tail);
     // Needs to return all the rules in the order they were added (i.e. order they were declared)
     // Also this needs to be very quick since it is called often
@@ -139,7 +139,6 @@ private:
     typedef std::map<int, std::shared_ptr<HtnRule>> FactsAdditionsType;
     FactsAdditionsType m_factAdditions;
     std::shared_ptr<HtnSharedRules> m_sharedRules;
-    int m_dontCareCount;
 };
 
 #endif /* HtnRuleSet_hpp */

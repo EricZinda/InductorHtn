@@ -85,6 +85,7 @@ SUITE(HtnGoalResolverTests)
         string goals;
         string finalUnifier;
         string example;
+        int64_t highestMemoryUsedReturn;
         int furthestFailureIndex;
         std::vector<std::shared_ptr<HtnTerm>> farthestFailureContext;
 
@@ -94,10 +95,11 @@ SUITE(HtnGoalResolverTests)
         testState = "";
 
         compiler->Clear();
-        goals = "goals(=(CreateOrEval, create), d_the_q(conj(d_noun(crystal, X9410), conj(isInstance(X9410)))), d_noun(place, X9411), d_loc_nonsp(E9409, X9410, X9411, CreateOrEval)).";
+        goals = "goals(=(CreateOrEval,create), d_the_q(conj(d_noun(donkey,X9005),conj(isInstance(X9005)))), d_noun(place,X9006), d_loc_nonsp(E9004,X9005,X9006,CreateOrEval)).";
         CHECK(compiler->Compile(example + sharedState + testState + goals));
-        unifier = compiler->SolveGoals(&resolver, 1000000, nullptr, &furthestFailureIndex, &farthestFailureContext);
+        unifier = compiler->SolveGoals(&resolver, 1000000, &highestMemoryUsedReturn, &furthestFailureIndex, &farthestFailureContext);
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        int64_t factorySize = factory->dynamicSize();
 //        CHECK_EQUAL(finalUnifier, "((?CreateOrEval = create, ?E9001 = id9007, ?X9002 = diamond1, ?X9003 = player))");
 //        CHECK_EQUAL(0, furthestFailureIndex);
 //        CHECK_EQUAL(0, farthestFailureContext.size());

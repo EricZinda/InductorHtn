@@ -23,6 +23,8 @@ public:
         {
             SetTraceFilter(SystemTraceType::None, TraceDetail::Normal);
         }
+        
+        m_budgetBytes = defaultMemoryBudget;
 
         // InductorHtn uses the same factory model (and classes) as InductorProlog
         // for creating terms so it can "intern" them to save memory.  
@@ -49,6 +51,7 @@ public:
     }
 
 public:
+    uint64_t m_budgetBytes;
     shared_ptr<HtnCompiler> m_compiler;
     shared_ptr<PrologStandardCompiler> m_prologCompiler;
     shared_ptr<HtnTermFactory> m_factory;
@@ -72,19 +75,9 @@ public:
 
 extern "C"  //Tells the compile to use C-linkage for the next scope.
 {
-    char* GetCharPtrFromString(const string& value)
-    {
-        return _strdup(value.c_str());
-    }
-
-    __declspec(dllexport) void __stdcall FreeString(char* value)
-    {
-        free(value);
-    }
-
     __declspec(dllexport) HtnPlannerPythonWrapper* __stdcall  CreateHtnPlanner(bool debug)
     {
-        // Note: Inside the function body, I can use C++. 
+        // Note: Inside the function body, I can use C++.
         return new(std::nothrow) HtnPlannerPythonWrapper(debug);
     }
 
@@ -93,39 +86,14 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
         operator delete(ptr, std::nothrow);
     }
 
-    __declspec(dllexport) void __stdcall SetDebugTracing(bool debug)
+    __declspec(dllexport) void __stdcall FreeString(char* value)
     {
-        if (debug)
-        {
-            SetTraceFilter((int)SystemTraceType::Solver | (int)SystemTraceType::Planner, TraceDetail::Diagnostic);
-        }
-        else
-        {
-            SetTraceFilter(SystemTraceType::None, TraceDetail::Normal);
-        }
+        free(value);
     }
 
-    // Compile *adds* whatever is passed into the current state of the database
-    __declspec(dllexport) char* __stdcall PrologCompile(HtnPlannerPythonWrapper* ptr, const char* data)
+    char* GetCharPtrFromString(const string& value)
     {
-        // Catch any FailFasts and return their description
-        TreatFailFastAsException(true);
-        try
-        {
-            string programString = string(data);
-            if (!ptr->m_prologCompiler->Compile(programString))
-            {
-                return GetCharPtrFromString(ptr->m_compiler->GetErrorString());
-            }
-            else
-            {
-                return nullptr;
-            }
-        }
-        catch (runtime_error & error)
-        {
-            return GetCharPtrFromString(error.what());
-        }
+        return _strdup(value.c_str());
     }
 
     __declspec(dllexport) bool __stdcall HtnApplySolution(HtnPlannerPythonWrapper* ptr, const uint64_t solutionIndex)
@@ -164,6 +132,43 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
         }
      }
 
+    // Returns result in Json format
+    __declspec(dllexport) char* __stdcall HtnFindAllPlans(HtnPlannerPythonWrapper* ptr, char *queryChars, char **result)
+    {
+        // Catch any FailFasts and return their description
+        TreatFailFastAsException(true);
+        try
+        {
+            string queryString = string(queryChars);
+
+            // The PrologQueryCompiler will compile Prolog queries using the normal
+            // Prolog parsing rules *except* that variables start with ? and
+            // capitalization doesn't mean anything special
+            shared_ptr<PrologQueryCompiler> queryCompiler = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(ptr->m_factory.get()));
+
+            if (queryCompiler->Compile(queryString))
+            {
+                ptr->m_lastSolutions = ptr->m_planner->FindAllPlans(ptr->m_factory.get(),
+                                                                    ptr->m_state,
+                                                                    queryCompiler->result(),
+                                                                    ptr->m_budgetBytes);
+                *result = GetCharPtrFromString(HtnPlanner::ToStringSolutions(ptr->m_lastSolutions, true));
+
+                return nullptr;
+            }
+            else
+            {
+                *result = nullptr;
+                return GetCharPtrFromString(queryCompiler->GetErrorString());
+            }
+        }
+        catch (runtime_error & error)
+        {
+            *result = nullptr;
+            return GetCharPtrFromString(error.what());
+        }
+    }
+
     __declspec(dllexport) char* __stdcall HtnQuery(HtnPlannerPythonWrapper* ptr, char* queryChars, char** result)
     {
         // Catch any FailFasts and return their description
@@ -172,15 +177,19 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
         {
             string queryString = string(queryChars);
 
-            // The PrologQueryCompiler will compile Prolog queries using the normal 
-            // Prolog parsing rules *except* that variables start with ? and 
+            // The PrologQueryCompiler will compile Prolog queries using the normal
+            // Prolog parsing rules *except* that variables start with ? and
             // capitalization doesn't mean anything special
             shared_ptr<PrologQueryCompiler> queryCompiler = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(ptr->m_factory.get()));
 
             if (queryCompiler->Compile(queryString))
             {
                 // The resolver can give one answer at a time using ResolveNext(), or just get them all using ResolveAll()
-                shared_ptr<vector<UnifierType>> queryResult = ptr->m_resolver->ResolveAll(ptr->m_factory.get(), ptr->m_state.get(), queryCompiler->result());
+                shared_ptr<vector<UnifierType>> queryResult = ptr->m_resolver->ResolveAll(ptr->m_factory.get(),
+                                                                                          ptr->m_state.get(),
+                                                                                          queryCompiler->result(),
+                                                                                          0,
+                                                                                          ptr->m_budgetBytes);
                 if (queryResult == nullptr)
                 {
                     *result = GetCharPtrFromString("{\"False\" :[]}");
@@ -205,6 +214,48 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
         }
     }
 
+    // Compile *adds* whatever is passed into the current state of the database
+    __declspec(dllexport) char* __stdcall PrologCompile(HtnPlannerPythonWrapper* ptr, const char* data)
+    {
+        // Catch any FailFasts and return their description
+        TreatFailFastAsException(true);
+        try
+        {
+            string programString = string(data);
+            if (!ptr->m_prologCompiler->Compile(programString))
+            {
+                return GetCharPtrFromString(ptr->m_compiler->GetErrorString());
+            }
+            else
+            {
+                return nullptr;
+            }
+        }
+        catch (runtime_error & error)
+        {
+            return GetCharPtrFromString(error.what());
+        }
+    }
+
+    __declspec(dllexport) void __stdcall SetDebugTracing(bool debug)
+    {
+        if (debug)
+        {
+            SetTraceFilter((int)SystemTraceType::Solver | (int)SystemTraceType::Planner, TraceDetail::Diagnostic);
+        }
+        else
+        {
+            SetTraceFilter(SystemTraceType::None, TraceDetail::Normal);
+        }
+    }
+
+    __declspec(dllexport) void __stdcall SetMemoryBudget(HtnPlannerPythonWrapper* ptr, const uint64_t budgetBytes)
+    {
+        // Reset the out of memory flag if it got set
+        ptr->m_factory->outOfMemory(false);
+        ptr->m_budgetBytes = budgetBytes;
+    }
+
     // returns result in Json format
     // if the query failed, it will be a False term
     __declspec(dllexport) char* __stdcall StandardPrologQuery(HtnPlannerPythonWrapper* ptr, char* queryChars, char** result)
@@ -215,23 +266,34 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
         {
             string queryString = string(queryChars);
 
-            // The PrologStandardQueryCompiler will compile Prolog queries using the normal 
+            // The PrologStandardQueryCompiler will compile Prolog queries using the normal
             // Prolog parsing rules requiring Capitalization of variables
             shared_ptr<PrologStandardQueryCompiler> queryCompiler = shared_ptr<PrologStandardQueryCompiler>(new PrologStandardQueryCompiler(ptr->m_factory.get()));
 
-            if (queryCompiler->Compile(queryString))
+            if(queryCompiler->Compile(queryString))
             {
                 // The resolver can give one answer at a time using ResolveNext(), or just get them all using ResolveAll()
                 int64_t highestMemoryUsedReturn;
                 int furthestFailureIndex;
                 std::vector<std::shared_ptr<HtnTerm>> farthestFailureContext;
-                shared_ptr<vector<UnifierType>> queryResult = ptr->m_resolver->ResolveAll(ptr->m_factory.get(), ptr->m_state.get(), queryCompiler->result(),
+                shared_ptr<vector<UnifierType>> queryResult = ptr->m_resolver->ResolveAll(ptr->m_factory.get(),
+                                                                                          ptr->m_state.get(),
+                                                                                          queryCompiler->result(),
                                                                                           0,
-                                                                                          defaultMemoryBudget,
+                                                                                          ptr->m_budgetBytes,
                                                                                           &highestMemoryUsedReturn,
                                                                                           &furthestFailureIndex,
                                                                                           &farthestFailureContext);
-                if (queryResult == nullptr)
+                if(ptr->m_factory->outOfMemory())
+                {
+                    string outOfMemoryString =  "out of memory: Budget:" + lexical_cast<string>(ptr->m_budgetBytes) +
+                                               ", Highest total memory used: " + lexical_cast<string>(highestMemoryUsedReturn) +
+                                               ", Memory used only by term names: " + lexical_cast<string>(ptr->m_factory->dynamicSize()) +
+                                               ", The difference was probably used by the resolver, either in its stack memory or memory used by the number of terms that unify with a single term. Turn on tracing to see more details.";
+                    *result = nullptr;
+                    return GetCharPtrFromString(outOfMemoryString);
+                }
+                else if(queryResult == nullptr)
                 {
                     string failureContextString;
                     if(farthestFailureContext.size() > 0)
@@ -259,39 +321,4 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
             return GetCharPtrFromString(error.what());
         }
     }
-
-     // Returns result in Json format
-     __declspec(dllexport) char* __stdcall HtnFindAllPlans(HtnPlannerPythonWrapper* ptr, char *queryChars, char **result)
-     {
-         // Catch any FailFasts and return their description
-         TreatFailFastAsException(true);
-         try
-         {
-             string queryString = string(queryChars);
-
-             // The PrologQueryCompiler will compile Prolog queries using the normal 
-             // Prolog parsing rules *except* that variables start with ? and 
-             // capitalization doesn't mean anything special
-             shared_ptr<PrologQueryCompiler> queryCompiler = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(ptr->m_factory.get()));
-
-             if (queryCompiler->Compile(queryString))
-             {
-                 ptr->m_lastSolutions = ptr->m_planner->FindAllPlans(ptr->m_factory.get(), ptr->m_state, queryCompiler->result());
-                 *result = GetCharPtrFromString(HtnPlanner::ToStringSolutions(ptr->m_lastSolutions, true));
-
-                 return nullptr;
-             }
-             else
-             {
-                 *result = nullptr;
-                 return GetCharPtrFromString(queryCompiler->GetErrorString());
-             }
-         }
-         catch (runtime_error & error)
-         {
-             *result = nullptr;
-             return GetCharPtrFromString(error.what());
-         }
-     }
-
 } //End C linkage scope.

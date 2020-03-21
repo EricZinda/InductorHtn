@@ -720,7 +720,7 @@ bool HtnGoalResolver::IsGround(UnifierType *unifier)
 // otherwise returns an array of UnifierTypes for all the solutions
 shared_ptr<vector<UnifierType>> HtnGoalResolver::ResolveAll(HtnTermFactory *termFactory, HtnRuleSet *prog, const vector<shared_ptr<HtnTerm>> &initialGoals, int initialIndent, int memoryBudget, int64_t *highestMemoryUsedReturn, int *furthestFailureIndex, std::vector<std::shared_ptr<HtnTerm>> *farthestFailureContext)
 {
-    Trace3("ALL BEGIN  ", "goals:{0}, termStrings:{1}, termOther:{2}", initialIndent, false, HtnTerm::ToString(initialGoals), termFactory->stringSize(), termFactory->otherAllocationSize());
+    Trace3("ALL BEGIN  ", "goals:{0}, termStringsMemorySize:{1}, termOtherMemorySize:{2}", initialIndent, false, HtnTerm::ToString(initialGoals), termFactory->stringSize(), termFactory->otherAllocationSize());
 
     shared_ptr<ResolveState> state = shared_ptr<ResolveState>(new ResolveState(termFactory, prog, initialGoals, initialIndent, memoryBudget));
     shared_ptr<vector<UnifierType>> solutions = shared_ptr<vector<UnifierType>>(new vector<UnifierType>());
@@ -730,15 +730,20 @@ shared_ptr<vector<UnifierType>> HtnGoalResolver::ResolveAll(HtnTermFactory *term
         shared_ptr<UnifierType> solution = ResolveNext(state.get());
         if(solution != nullptr)
         {
-            Trace5("END        ", "Query: {0} -> {1}, termStrings:{2}, termOther:{3}, highestMemoryUsedStack:{4}", initialIndent, state->fullTrace, HtnTerm::ToString(initialGoals), ToString(*solution), termFactory->stringSize(), termFactory->otherAllocationSize(), state->highestMemoryUsedStack);
+            Trace5("END        ", "Query: {0} -> {1}, termStringsMemorySize:{2}, termOtherMemorySize:{3}, highestMemoryUsedStack:{4}", initialIndent, state->fullTrace, HtnTerm::ToString(initialGoals), ToString(*solution), termFactory->stringSize(), termFactory->otherAllocationSize(), state->highestMemoryUsedStack);
             solutions->push_back(*solution);
         }
         else
         {
-            Trace3("END        ", "No more solutions. Query: {0}, termStrings:{1}, termOther:{2}", initialIndent, state->fullTrace, HtnTerm::ToString(initialGoals), termFactory->stringSize(), termFactory->otherAllocationSize());
+            Trace3("END        ", "No more solutions. Query: {0}, termStringsMemorySize:{1}, termOtherMemorySize:{2}", initialIndent, state->fullTrace, HtnTerm::ToString(initialGoals), termFactory->stringSize(), termFactory->otherAllocationSize());
             break;
         }
         
+        if(termFactory->outOfMemory())
+        {
+            Trace4("END        ", "Out of memory. Query: {0}, termStringsMemorySize:{1}, termOtherMemorySize:{2}, highestMemoryUsedStack:{3}", initialIndent, state->fullTrace, HtnTerm::ToString(initialGoals), termFactory->stringSize(), termFactory->otherAllocationSize(), state->highestMemoryUsedStack);
+            break;
+        }
         state->ClearFailures();
     }
     
@@ -825,7 +830,7 @@ shared_ptr<UnifierType> HtnGoalResolver::ResolveNext(ResolveState *state)
         {
             // Out of memory: don't return the current solution since it is not done, and don't allow continuing
             // Since we're in an unknown state
-            Trace5("MEMORY     ", "***** OUT OF MEMORY ***** used:{0}, budget:{1}, totalTermMemory:{2}, totalRulesetMemory:{3}, highestMemoryStack:{4}", indentLevel, true, totalMemoryUsed, state->memoryBudget, termFactory->dynamicSize(), prog->dynamicSize(), state->highestMemoryUsedStack);
+            Trace6("MEMORY     ", "***** OUT OF MEMORY ***** used:{0}, budget:{1}, totalTermMemory:{2}, totalRulesetMemory:{3}, stackMemory:{4}, highestMemoryStack:{5}", indentLevel, true, totalMemoryUsed, state->memoryBudget, termFactory->dynamicSize(), prog->dynamicSize(), state->stackMemoryUsed, state->highestMemoryUsedStack);
             state->termFactory->outOfMemory(true);
             currentNode->continuePoint = ResolveContinuePoint::ProgramError;
             return nullptr;
@@ -951,6 +956,7 @@ shared_ptr<UnifierType> HtnGoalResolver::ResolveNext(ResolveState *state)
                             if(termFactory->outOfMemory())
                             {
                                 // Finding rules can require lots of memory so we check for OOM here
+                                Trace5("MEMORY     ", "***** OUT OF MEMORY ***** used:{0}, budget:{1}, totalTermMemory:{2}, totalRulesetMemory:{3}, highestMemoryStack:{4}", indentLevel, true, totalMemoryUsed, state->memoryBudget, termFactory->dynamicSize(), prog->dynamicSize(), state->highestMemoryUsedStack);
                                 currentNode->continuePoint = ResolveContinuePoint::ProgramError;
                             }
                             else

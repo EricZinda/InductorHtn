@@ -47,7 +47,10 @@ public:
     std::shared_ptr<HtnCustomData> customData(const std::string &name);
     void customData(const std::string &name, std::shared_ptr<HtnCustomData> data) { m_customData[name] = data; }
     bool outOfMemory() { return m_outOfMemory; }
-    void outOfMemory(bool value) { m_outOfMemory = value; }
+    void outOfMemory(bool value)
+    {
+        m_outOfMemory = value;
+    }
     int64_t dynamicSize() { return m_otherAllocations + m_stringAllocations; }
     int64_t otherAllocationSize() { return m_otherAllocations; }
     int64_t stringSize() { return m_stringAllocations; }

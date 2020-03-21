@@ -1,15 +1,43 @@
 import sys, platform
 import ctypes, ctypes.util
 from sys import platform
+import json
 
+
+# Prolog json term format used by the code below is:
+# A single Prolog term is a dictionary with one key that is the name of the term
+# Arguments are in a list. E.g.:
+# { "TermName": [{"Arg1TermName":[]}, {"Arg2TermName":[]}] }
 def termArgs(term):
     return list(term.values())[0]
+
+
+def termIsConstant(term):
+    return len(termArgs(term)) == 0
+
 
 def termName(term):
     return list(term)[0]
 
-def termIsConstant(term):
-    return len(termArgs(term)) == 0
+
+# Property converts all solutions (or errors) returned
+# from a prolog query into a set of strings with Prolog predicates
+def queryResultToPrologStringList(queryResult):
+    jsonQuery = json.loads(queryResult)
+    solutionList = []
+    if "False" in jsonQuery[0]:
+        # Query failed, so it is not a unification list it
+        # is a term list
+        solutionList.append(termListToString(jsonQuery))
+    else:
+        for solution in jsonQuery:
+            assignmentList = []
+            for variableName in solution.keys():
+                assignmentList.append("{} = {}".format(variableName, termToString(solution[variableName])))
+            solutionList.append(", ".join(assignmentList))
+
+    return solutionList
+
 
 def termListToString(termList):
     termStringList = []
@@ -17,17 +45,20 @@ def termListToString(termList):
         termStringList.append(termToString(term))
     return ",".join(termStringList)
 
+
 def termToString(term):
     value = termName(term)
-    value += "("
-    hasArgs = False
-    for argTerm in termArgs(term):
-        if hasArgs:
-            value += ", "
-        value += termToString(argTerm)
-        hasArgs = True  
-    value += ")"
+    if not termIsConstant(term):
+        value += "("
+        hasArgs = False
+        for argTerm in termArgs(term):
+            if hasArgs:
+                value += ", "
+            value += termToString(argTerm)
+            hasArgs = True
+        value += ")"
     return value
+
 
 class HtnPlanner(object):
     def __init__(self, debug=False):
@@ -71,6 +102,7 @@ class HtnPlanner(object):
         self.indhtnLib.StandardPrologQuery.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_char))]
         self.indhtnLib.StandardPrologQuery.restype = ctypes.POINTER(ctypes.c_char)
         self.indhtnLib.SetDebugTracing.argtypes = [ctypes.c_int64]
+        self.indhtnLib.SetMemoryBudget.argtypes = [ctypes.c_void_p, ctypes.c_int64]
 
         # Now create an instance of the object
         self.obj = self.indhtnLib.CreateHtnPlanner(debug)
@@ -78,6 +110,11 @@ class HtnPlanner(object):
     # debug = True to enable debug tracing, False to turn off
     def SetDebugTracing(self, debug):
         self.indhtnLib.SetDebugTracing(debug)
+
+    # Sets the budget for the planner and prolog compiler to use in bytes
+    # i.e. 1K budget should be budgetBytes = 1024
+    def SetMemoryBudget(self, budgetBytes):
+        self.indhtnLib.SetMemoryBudget(self.obj, budgetBytes)
 
     # Returns true if the index is in range, false otherwise
     def ApplySolution(self, index):
@@ -136,6 +173,15 @@ class HtnPlanner(object):
             else:
                 return None, resultQuery
 
+    # returns compileError, solutions
+    # compileError = None if no compile error, or a string error message OR a string that starts with "out of memory:"
+    #       if it runs out of memory. If it does run out of memory, call SetMemoryBudget() with a larger number and try again
+    # solutions = will always be a json string that contains one of two cases:
+    #   - If there were no solutions it will be a list of Prolog json terms, the Prolog equivalent is:
+    #       False, failureIndex(*Index of term in original query that failed*), ...Any Terms in FailureContext...
+    #   - If there were solutions it will be a list containing all the solutions
+    #       each is a dictionary where the keys are variable names and the values are what they are assigned to
+    # If it runs out of memory it throws
     def PrologQuery(self, str):
         mem = ctypes.POINTER(ctypes.c_char)()
         resultPtr = self.indhtnLib.StandardPrologQuery(self.obj, str.encode('UTF-8', 'strict'), ctypes.byref(mem))

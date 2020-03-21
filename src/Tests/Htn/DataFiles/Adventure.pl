@@ -1,5 +1,6 @@
 /*
 % These lines are needed to run in Swish prolog
+
 :- style_check(-discontiguous).
 :- dynamic(rel/3).
 :- dynamic(state/2).
@@ -13,10 +14,6 @@ failureContext(_, _, _, _).
 failureContext(_, _, _, _, _).
 count(Count, Term) :-
     aggregate_all(count, Term, Count).
-
-% implementation of Inductor Prolog distinct
-distinct(_, Term) :-
-    setof(_, Term, _).
 */
 
 /***********************************/
@@ -59,14 +56,6 @@ idProperName_prop_name.
 rel(idProperName_prop_name, instanceOf, idName).   % idThing_prop_name is a idName
 rel(idProperName_prop_name, propertyOf, idProperName).  % idThing_prop_name is a property of thing
 state(idProperName_prop_name, label('proper name')).     % idThing_prop_name is "thing"
-
-idPlace.
-rel(idPlace, specializes, idConcept).
-idPlace_prop_name.
-rel(idPlace_prop_name, instanceOf, idName).
-rel(idPlace_prop_name, propertyOf, idPlace).
-state(idPlace_prop_name, label('place')).
-
 
 idPerson.
 rel(idPerson, specializes, idObject).
@@ -138,172 +127,6 @@ idActor.      % The ID for an actor property of events
 rel(idActor, specializes, idThing).
 idAction.     % The ID for an action property of events
 rel(idAction, specializes, idThing).
-
-
-% ************************
-% **** Specializations for this game
-% ************************
-
-% ************************
-% **** Types of things that exist
-% ************************
-idDiamond.
-rel(idDiamond, specializes, idObject).
-% give it a name
-idDiamond_prop_name.
-rel(idDiamond_prop_name, instanceOf, idName).
-rel(idDiamond_prop_name, propertyOf, idDiamond).
-state(idDiamond_prop_name, label('diamond')).
-
-idRock.
-rel(idRock, specializes, idObject).
-% give it a name
-idRock_prop_name.
-rel(idRock_prop_name, instanceOf, idName).
-rel(idRock_prop_name, propertyOf, idRock).
-state(idRock_prop_name, label('rock')).
-
-% Cave
-idCave.
-rel(idCave, specializes, idPlace).
-% give it a name
-idCave_prop_name.
-rel(idCave_prop_name, instanceOf, idName).
-rel(idCave_prop_name, propertyOf, idCave).
-state(idCave_prop_name, label('cave')).
-
-% Entrance
-idEntrance.
-rel(idEntrance, specializes, idPlace).
-% give it a name
-idEntrance_prop_name.
-rel(idEntrance_prop_name, instanceOf, idName).
-rel(idEntrance_prop_name, propertyOf, idEntrance).
-state(idEntrance_prop_name, label('entrance')).
-
-
-% ************************
-% **** Current state of the game
-% ************************
-
-% Just need an example of another person type
-idFireman.
-rel(idFireman, specializes, idPerson).
-% give it a name
-idFireman_prop_name.
-rel(idFireman_prop_name, instanceOf, idName).
-rel(idFireman_prop_name, propertyOf, idFireman).
-state(idFireman_prop_name, label('fireman')).
-
-% Lexi
-idLexi.
-rel(idLexi, instanceOf, idPerson).
-% give Lexi a proper name
-idLexi_prop_propername.
-rel(idLexi_prop_propername, instanceOf, idProperName).
-rel(idLexi_prop_propername, propertyOf, idLexi).
-state(idLexi_prop_propername, label('Lexi')).
-% a bottom face
-idLexiBottom.
-rel(idLexiBottom, instanceOf, idFace).
-rel(idLexiBottom, idPartOfRel, idLexi).
-state(idLexiBottom, idLocalBottom).
-% Current inside
-rel(idLexiBottom, idTouchingRel, idEntrancecaveInside).
-rel(idEntrancecaveInside, idTouchingRel, idLexiBottom).
-
-% Diamond
-idDiamond1.
-rel(idDiamond1, instanceOf, idDiamond).
-% a bottom face
-idDiamond1Bottom.
-rel(idDiamond1Bottom, instanceOf, idFace).
-rel(idDiamond1Bottom, idPartOfRel, idDiamond1).
-state(idDiamond1Bottom, idLocalBottom).
-% Current inside
-rel(idDiamond1Bottom, idTouchingRel, idEntrancecaveInside).
-
-% Rocks
-idRock1.
-rel(idRock1, instanceOf, idRock).
-% a bottom face
-idRock1Bottom.
-rel(idRock1Bottom, instanceOf, idFace).
-rel(idRock1Bottom, idPartOfRel, idRock1).
-state(idRock1Bottom, idLocalBottom).
-% Current inside
-rel(idRock1Bottom, idTouchingRel, idPlageInside).
-
-idRock2.
-rel(idRock2, instanceOf, idRock).
-% a bottom face
-idRock2Bottom.
-rel(idRock2Bottom, instanceOf, idFace).
-rel(idRock2Bottom, idPartOfRel, idRock2).
-state(idRock2Bottom, idLocalBottom).
-% Current inside
-rel(idRock2Bottom, idTouchingRel, idPlageInside).
-
-
-% World layout
-% Entrancecave
-idEntrancecave.
-rel(idEntrancecave, instanceOf, idCave).
-rel(idEntrancecave, instanceOf, idEntrance).
-% give it an inside Face
-idEntrancecaveInside.
-rel(idEntrancecaveInside, instanceOf, idFace).
-rel(idEntrancecaveInside, idPartOfRel, idEntrancecave).
-state(idEntrancecaveInside, idLocalInside).
-%give it a back face
-idEntrancecaveBack.
-rel(idEntrancecaveBack, instanceOf, idFace).
-rel(idEntrancecaveBack, idPartOfRel, idEntrancecave).
-state(idEntrancecaveBack, idLocalBack).
-%back face has an opening
-idEntrancecaveBackOpening.
-rel(idEntrancecaveBackOpening, instanceOf, idOpening).
-rel(idEntrancecaveBackOpening, idPartOfRel, idEntrancecaveBack).
-% That is touching plage
-rel(idEntrancecaveBack, idTouchingRel, idPlageFront).
-
-% Plage
-idPlage.
-rel(idPlage, instanceOf, idCave).
-% give it a proper name
-idPlage_prop_propernameage.
-rel(idPlage_prop_propernameage, instanceOf, idProperName).
-rel(idPlage_prop_propernameage, propertyOf, idPlage).
-state(idPlage_prop_propernameage, label('Plage')).
-% give it an inside Face
-idPlageInside.
-rel(idPlageInside, instanceOf, idFace).
-rel(idPlageInside, idPartOfRel, idPlage).
-state(idPlageInside, idLocalInside).
-%give it a front face
-idPlageFront.
-rel(idPlageFront, instanceOf, idFace).
-rel(idPlageFront, idPartOfRel, idPlage).
-state(idPlageFront, idLocalFront).
-%front face has an opening
-idPlageFrontOpening.
-rel(idPlageFrontOpening, instanceOf, idOpening).
-rel(idPlageFrontOpening, idPartOfRel, idPlageFront).
-% That is touching Entrancecave
-rel(idPlageFront, idTouchingRel, idEntrancecaveBack).
-
-
-% At the start of the game lexi went to the entrancecave
-idStartingMovement.
-rel(idStartingMovement, instanceOf, idEvent).
-idStartingMovement_prop_actor.
-rel(idStartingMovement_prop_actor, instanceOf, idActor).
-rel(idStartingMovement_prop_actor, propertyOf, idStartingMovement).
-state(idStartingMovement_prop_actor, idLexi).
-idStartingMovement_prop_action.
-rel(idStartingMovement_prop_action, instanceOf, idAction).
-rel(idStartingMovement_prop_action, propertyOf, idStartingMovement).
-state(idStartingMovement_prop_action, idGo).
 
 
 
@@ -489,15 +312,7 @@ inScopeNonunique(Object, InScope) :-
     \==(Object, InScope).
 
 
-
-/*************************/
-/*************************/
-/*************************/
-/*************************/
-/*************************/
-/*************************/
-/*************************/
-
+    
 
 
 % ************************
@@ -505,16 +320,28 @@ inScopeNonunique(Object, InScope) :-
 % ************************
 % Physical objects can be manipulated
 idPhysicalObject.
+% All Physical objects are a "Place" since things can be on them, next to
+% them, etc
 rel(idPhysicalObject, specializes, idObject).
 idPhysicalObject_prop_name.
 rel(idPhysicalObject_prop_name, instanceOf, idName).
 rel(idPhysicalObject_prop_name, propertyOf, idPhysicalObject).
 state(idPhysicalObject, label('physical object')).
 
+% ID for anything that can be "where something is"
+% which always has to be a face of something in the real world
+idPlace.
+rel(idPlace, specializes, idConcept).
+idPlace_prop_name.
+rel(idPlace_prop_name, instanceOf, idName).
+rel(idPlace_prop_name, propertyOf, idPlace).
+state(idPlace_prop_name, label('place')).
+
 % A physical object can have 6 faces
 % each has a state which is which face they are
+% They are all places where something can be located
 idFace.
-rel(idFace, specializes, concept).
+rel(idFace, specializes, idPlace).
 
 % They have seven faces which are called "local" since they don't change as the
 % object is moved.  They don't have names since they are relative
@@ -599,7 +426,7 @@ inList(Item, item(_, Y)) :- inList(Item, Y).
 % levels of containment (1 means directly contained)
 containedIn(Source, Container, ContainmentDepth) :-
     distinct(_, containedInNonunique(Source, Container, ContainmentDepth)).
-             
+
 % Note that this can return duplicates!
 containedInNonunique(Source, Container, ContainmentDepth) :-
     pileOrContaining(Source, Container, ContainerFaceType, ContainmentDepth),
@@ -638,7 +465,12 @@ path(X, Y, V) :- \+ member(X, V), edge(X, Z), path(Z, Y, [X|V]).
 */
 
 % How to deal with the human concept of "Location".
-% First it is always relative to the user. If the user is asking for location
+% It will always return either a specific thing the object is touching in some way
+% OR it will return an object that it is eventually inside (which always has an inside)
+% First, we always assume the user knows the "most obvious thing" which is what is in the
+% same container as them, so we give them one more level of detail if we have it
+%
+% it is always relative to the user. If the user is asking for location
 % they must not know, so give them the next level of detail from what they should know
 % - At the highest level, the location of a thing is the outermost thing it is inside
 % - If the human and the thing are inside the same thing but at different ultimate levels,
@@ -661,7 +493,6 @@ locationOf(Searcher, Thing, Location) :-
     describeLocationOf(Searcher, Thing, Location).
 
 
-
 % If Searcher is in immediate level X and Thing eventually shares that level
 % Return the level that is one closer to Thing
 describeLocationOf(Searcher, Thing, Location) :-
@@ -670,26 +501,66 @@ describeLocationOf(Searcher, Thing, Location) :-
     \==(ThingLevel, 1),
     is(ThingLocationLevel, -(ThingLevel, 1)),
     containedIn(Thing, Location, ThingLocationLevel), !.
+% Or vice versa:
+% - Lexi in Cave1 which is in the world
+% - Cave 2 is in the world
+% Where is cave 2?
+describeLocationOf(Searcher, Thing, Location) :-
+    containedIn(Searcher, SearcherLocation, SearcherLevel),
+    \==(SearcherLevel, 1),
+    containedIn(Thing, SearcherLocation, 1),
+    is(SearcherLocationLevel, -(SearcherLevel, 1)),
+    containedIn(Thing, Location, SearcherLocationLevel), !.
 
 % If Searcher and Thing are directly inside the same container
 % and thing is touching something besides the container, return that
+% because presumably the Searcher knows what is around them
 describeLocationOf(Searcher, Thing, Location) :-
     containedIn(Searcher, ContainLocation, 1),
     containedIn(Thing, ContainLocation, 1),
-    isTouching(Thing, _, rel(SourceFaceType, idTouchingRel, TargetFaceType)),
+    isTouching(Thing, _, rel(SourceFaceType, idTouchingRel, Location)),
     not(state(SourceFaceType, idLocalInside)),
-    not(state(TargetFaceType, idLocalInside)),
-    =(Location, rel(SourceFaceType, idTouchingRel, TargetFaceType)), !.
+    not(state(Location, idLocalInside)), !.
 
 % Otherwise if Searcher and Thing are directly inside the same container
 % and thing is not touching anything besides the container, return the container
+% because presumably the Searcher knows what is around them but there is nothing
+% more descriptive to return
 describeLocationOf(Searcher, Thing, Location) :-
     containedIn(Searcher, Location, 1),
     containedIn(Thing, Location, 1).
 
+
+
+
 % ************************
-% **** Generic Object Models
+% **** Specializations for this game
 % ************************
+
+
+% *****************************************************************
+% **** Scenario: Table with book.  safe on book containing crystals
+%
+% | |   | Crystal1  | |                     |
+% | |   --- Safe ---  |                     |
+% | |       Book      |                     |
+% | |       Table     |                     |
+% | - Entrance Cave - | ------ Plage ------ |
+% | --------------- World ------------------|
+% ************************
+
+
+% ************************
+% **** Types of things that exist
+% ************************
+idWorld.
+rel(idWorld, specializes, idObject).
+% give it a name
+idWorld_prop_name.
+rel(idWorld_prop_name, instanceOf, idName).
+rel(idWorld_prop_name, propertyOf, idWorld).
+state(idWorld_prop_name, label('world')).
+
 idCrystal.
 rel(idCrystal, specializes, idPhysicalObject).
 idCrystal_prop_name.
@@ -718,10 +589,186 @@ rel(idBook_prop_name, instanceOf, idName).
 rel(idBook_prop_name, propertyOf, idBook).
 state(idBook_prop_name, label('book')).
 
+idDiamond.
+rel(idDiamond, specializes, idObject).
+% give it a name
+idDiamond_prop_name.
+rel(idDiamond_prop_name, instanceOf, idName).
+rel(idDiamond_prop_name, propertyOf, idDiamond).
+state(idDiamond_prop_name, label('diamond')).
+
+idRock.
+rel(idRock, specializes, idObject).
+% give it a name
+idRock_prop_name.
+rel(idRock_prop_name, instanceOf, idName).
+rel(idRock_prop_name, propertyOf, idRock).
+state(idRock_prop_name, label('rock')).
+
+% Cave
+idCave.
+rel(idCave, specializes, idPlace).
+% give it a name
+idCave_prop_name.
+rel(idCave_prop_name, instanceOf, idName).
+rel(idCave_prop_name, propertyOf, idCave).
+state(idCave_prop_name, label('cave')).
+
+% Entrance
+idEntrance.
+rel(idEntrance, specializes, idPlace).
+% give it a name
+idEntrance_prop_name.
+rel(idEntrance_prop_name, instanceOf, idName).
+rel(idEntrance_prop_name, propertyOf, idEntrance).
+state(idEntrance_prop_name, label('entrance')).
+
+% Just need an example of another person type
+idFireman.
+rel(idFireman, specializes, idPerson).
+% give it a name
+idFireman_prop_name.
+rel(idFireman_prop_name, instanceOf, idName).
+rel(idFireman_prop_name, propertyOf, idFireman).
+state(idFireman_prop_name, label('fireman')).
 
 % ************************
-% **** Scenario: Table with book.  safe on book containing crystals
+% **** Current state of the game
 % ************************
+
+% Lexi
+idLexi.
+rel(idLexi, instanceOf, idPerson).
+% give Lexi a proper name
+idLexi_prop_propername.
+rel(idLexi_prop_propername, instanceOf, idProperName).
+rel(idLexi_prop_propername, propertyOf, idLexi).
+state(idLexi_prop_propername, label('Lexi')).
+% a bottom face
+idLexiBottom.
+rel(idLexiBottom, instanceOf, idFace).
+rel(idLexiBottom, idPartOfRel, idLexi).
+state(idLexiBottom, idLocalBottom).
+% Current inside
+rel(idLexiBottom, idTouchingRel, idEntrancecaveInside).
+rel(idEntrancecaveInside, idTouchingRel, idLexiBottom).
+
+% Diamond
+idDiamond1.
+rel(idDiamond1, instanceOf, idDiamond).
+% a bottom face
+idDiamond1Bottom.
+rel(idDiamond1Bottom, instanceOf, idFace).
+rel(idDiamond1Bottom, idPartOfRel, idDiamond1).
+state(idDiamond1Bottom, idLocalBottom).
+% Current inside
+rel(idDiamond1Bottom, idTouchingRel, idEntrancecaveInside).
+
+% Rocks
+idRock1.
+rel(idRock1, instanceOf, idRock).
+% a bottom face
+idRock1Bottom.
+rel(idRock1Bottom, instanceOf, idFace).
+rel(idRock1Bottom, idPartOfRel, idRock1).
+state(idRock1Bottom, idLocalBottom).
+% Current inside
+rel(idRock1Bottom, idTouchingRel, idPlageInside).
+
+idRock2.
+rel(idRock2, instanceOf, idRock).
+% a bottom face
+idRock2Bottom.
+rel(idRock2Bottom, instanceOf, idFace).
+rel(idRock2Bottom, idPartOfRel, idRock2).
+state(idRock2Bottom, idLocalBottom).
+% Current inside
+rel(idRock2Bottom, idTouchingRel, idPlageInside).
+
+
+% World layout
+% World needs to be here so that everything is inside something
+idWorld1.
+rel(idWorld, instanceOf, idWorld).
+% give it an inside Face
+idWorldInside.
+rel(idWorldInside, instanceOf, idFace).
+rel(idWorldInside, idPartOfRel, idWorld1).
+state(idWorldInside, idLocalInside).
+
+% Entrancecave
+idEntrancecave.
+rel(idEntrancecave, instanceOf, idCave).
+rel(idEntrancecave, instanceOf, idEntrance).
+% give it an inside Face
+idEntrancecaveInside.
+rel(idEntrancecaveInside, instanceOf, idFace).
+rel(idEntrancecaveInside, idPartOfRel, idEntrancecave).
+state(idEntrancecaveInside, idLocalInside).
+%bottom face
+idEntrancecaveBottom.
+rel(idEntrancecaveBottom, instanceOf, idFace).
+rel(idEntrancecaveBottom, idPartOfRel, idEntrancecave).
+state(idEntrancecaveBottom, idLocalBottom).
+% That is touching the world
+rel(idEntrancecaveBottom, idTouchingRel, idWorldInside).
+%give it a back face
+idEntrancecaveBack.
+rel(idEntrancecaveBack, instanceOf, idFace).
+rel(idEntrancecaveBack, idPartOfRel, idEntrancecave).
+state(idEntrancecaveBack, idLocalBack).
+%back face has an opening
+idEntrancecaveBackOpening.
+rel(idEntrancecaveBackOpening, instanceOf, idOpening).
+rel(idEntrancecaveBackOpening, idPartOfRel, idEntrancecaveBack).
+% That is touching plage
+rel(idEntrancecaveBack, idTouchingRel, idPlageFront).
+
+% Plage
+idPlage.
+rel(idPlage, instanceOf, idCave).
+% give it a proper name
+idPlage_prop_propernameage.
+rel(idPlage_prop_propernameage, instanceOf, idProperName).
+rel(idPlage_prop_propernameage, propertyOf, idPlage).
+state(idPlage_prop_propernameage, label('Plage')).
+% give it an inside Face
+idPlageInside.
+rel(idPlageInside, instanceOf, idFace).
+rel(idPlageInside, idPartOfRel, idPlage).
+state(idPlageInside, idLocalInside).
+%give it a bottom face
+idPlageBottom.
+rel(idPlageBottom, instanceOf, idFace).
+rel(idPlageBottom, idPartOfRel, idPlage).
+state(idPlageBottom, idLocalBottom).
+% That is touching the world
+rel(idPlageBottom, idTouchingRel, idWorldInside).
+%give it a front face
+idPlageFront.
+rel(idPlageFront, instanceOf, idFace).
+rel(idPlageFront, idPartOfRel, idPlage).
+state(idPlageFront, idLocalFront).
+%front face has an opening
+idPlageFrontOpening.
+rel(idPlageFrontOpening, instanceOf, idOpening).
+rel(idPlageFrontOpening, idPartOfRel, idPlageFront).
+% That is touching Entrancecave
+rel(idPlageFront, idTouchingRel, idEntrancecaveBack).
+
+
+% At the start of the game lexi went to the entrancecave
+idStartingMovement.
+rel(idStartingMovement, instanceOf, idEvent).
+idStartingMovement_prop_actor.
+rel(idStartingMovement_prop_actor, instanceOf, idActor).
+rel(idStartingMovement_prop_actor, propertyOf, idStartingMovement).
+state(idStartingMovement_prop_actor, idLexi).
+idStartingMovement_prop_action.
+rel(idStartingMovement_prop_action, instanceOf, idAction).
+rel(idStartingMovement_prop_action, propertyOf, idStartingMovement).
+state(idStartingMovement_prop_action, idGo).
+
 % There is a table
 idTable1.
 rel(idTable1, instanceOf, idTable).
@@ -731,7 +778,7 @@ idTable1Top.
 rel(idTable1Top, instanceOf, idFace).
 rel(idTable1Top, idPartOfRel, idTable1).
 state(idTable1Top, idLocalTop).
-rel(idTable1Top, idTouchingRel, idSafe1Bottom).
+rel(idTable1Top, idTouchingRel, idBook1Bottom).
 
 % Table is touching the inside of the entrancecave
 idTable1Bottom.
@@ -742,6 +789,7 @@ rel(idTable1Bottom, idTouchingRel, idEntrancecaveInside).
 
 % There is a book
 idBook1.
+rel(idBook1, instanceOf, idBook).
 
 % Book bottom is touching table Top
 idBook1Bottom.

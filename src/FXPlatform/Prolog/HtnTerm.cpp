@@ -845,7 +845,7 @@ int HtnTerm::TermCompare(const HtnTerm &other)
     }
 }
 
-string HtnTerm::ToString(bool isInList, bool json)
+string HtnTerm::ToString(bool isSecondTermInList, bool json)
 {
     stringstream stream;
     if(isConstant() || isVariable())
@@ -861,16 +861,32 @@ string HtnTerm::ToString(bool isInList, bool json)
     }
     else
     {
-        // If this is a list we handle specially
-        // If a child is ., print out [ and then the child
-        // If the right term is "[]" print out ] at the end
-        // .(a, .(b, []))
-        bool startedList = false;
-        if(*m_namePtr == "." && !isInList)
+        // If this is a list we handle specially. Lists are internally formed like this:
+        // .(a, .(b, [])) -> [a, b]
+        if(*m_namePtr == ".")
         {
-            // This is the start of a list
-            startedList = true;
-            stream << "[";
+            if(!isSecondTermInList)
+            {
+                // This is a top level list or the left side of a list
+                // Which means we are creating a list
+                stream << "[";
+            }
+            
+            // Whatever is in the left side is the term for this position in
+            // the list (which could also be a list), just add it
+            stream << m_arguments[0]->ToString(false, json);
+            
+            // The right side either ends the list with [] or continues with
+            // another .()
+            if(m_arguments[1]->name() == "[]")
+            {
+                stream << "]";
+            }
+            else
+            {
+                // Continue adding terms
+                stream << "," << m_arguments[1]->ToString(true, json);
+            }
         }
         else
         {
@@ -882,21 +898,15 @@ string HtnTerm::ToString(bool isInList, bool json)
             {
                 stream << *m_namePtr << "(";
             }
-        }
+            
 
-        bool hasArg = false;
-        for(auto arg : m_arguments)
-        {
-            stream << (hasArg ? "," : "") << arg->ToString(startedList, json);
-            hasArg = true;
-        }
+            bool hasArg = false;
+            for(auto arg : m_arguments)
+            {
+                stream << (hasArg ? "," : "") << arg->ToString(false, json);
+                hasArg = true;
+            }
 
-        if(startedList)
-        {
-            stream << "]";
-        }
-        else
-        {
             stream << (json ? "]}" : ")");
         }
     }

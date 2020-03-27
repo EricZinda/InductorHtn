@@ -1778,7 +1778,6 @@ SUITE(HtnGoalResolverTests)
         CHECK_EQUAL(finalUnifier, "((?Capital = A, ?Combo = ComboA))");
     }
     
-    
     TEST(HtnGoalResolverIsTests)
     {
         HtnGoalResolver resolver;

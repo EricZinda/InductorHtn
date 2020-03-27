@@ -212,7 +212,38 @@ SUITE(PrologCompilerTests)
         result = HtnGoalResolver::ToString(queryResult.get());
         CHECK_EQUAL(result, "null");
     }
+    
+    TEST(PrologListCompileTests)
+    {
+        //                        SetTraceFilter(SystemTraceType::Parsing, TraceDetail::Diagnostic);
+        HtnGoalResolver resolver;
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler;
+        shared_ptr<PrologQueryCompiler> query;
+        shared_ptr<vector<UnifierType>> queryResult;
+        string result;
 
+        // Ensure that lists get properly compiled into the internal form: .(first, .(second, []))
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile("[a]."));
+        query = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(factory.get()));
+        CHECK(query->Compile(("'.'(?X, ?Y).")));
+        queryResult = resolver.ResolveAll(factory.get(), state.get(), query->result());
+        result = HtnGoalResolver::ToString(queryResult.get());
+        CHECK_EQUAL("((?Y = [], ?X = a))", result);
+        
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile("[[], a, []]."));
+        query = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(factory.get()));
+        CHECK(query->Compile(("'.'(?A, ?B), =('.'(?C, ?D), ?B).")));
+        queryResult = resolver.ResolveAll(factory.get(), state.get(), query->result());
+        result = HtnGoalResolver::ToString(queryResult.get());
+        CHECK_EQUAL("((?B = [a,[]], ?A = [], ?D = [[]], ?C = a))", result);
+    }
+    
     template<class VariableRule>
     void ParserShared(bool htnStyle)
     {
@@ -222,7 +253,7 @@ SUITE(PrologCompilerTests)
         shared_ptr<Symbol> rule;
         vector<shared_ptr<Symbol>> flattenedTree;
         
-        //        SetTraceFilter(SystemTraceType::Parsing, TraceDetail::Diagnostic);
+//                SetTraceFilter(SystemTraceType::Parsing, TraceDetail::Diagnostic);
         
         // ************
         // These are the things that are different based on VariableRule
@@ -231,10 +262,10 @@ SUITE(PrologCompilerTests)
         // variable
         rule = ParserDebug::TestTryParse<PrologVariable<VariableRule>>("?a", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule == nullptr));
-        
+
         rule = ParserDebug::TestTryParse<PrologVariable<VariableRule>>("A", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule != nullptr));
-        
+
         // term
         rule = ParserDebug::TestTryParse<PrologTerm<VariableRule>>("?a", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule == nullptr));
@@ -242,28 +273,35 @@ SUITE(PrologCompilerTests)
         // functor (should not allow capitalization of functor names, not prolog compatible
         rule = ParserDebug::TestTryParse<PrologFunctor<VariableRule>>("do(Move(unit,from,to),SetEnergy(energy,-(energy,moveCost)))", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule == nullptr));
-        
+
         // Nothing with ? in front should work in Prolog-style, but should in the other
         rule = ParserDebug::TestTryParse<PrologFunctor<VariableRule>>("a(?b,?c)", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule == nullptr));
-        
+
         rule = ParserDebug::TestTryParse<PrologFunctor<VariableRule>>("a( ?b , ?c )", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule == nullptr));
-        
+
         rule = ParserDebug::TestTryParse<PrologFunctor<VariableRule>>("a( d(e,f,g) , ?c )", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule == nullptr));
-        
+
         // Examples
         rule = ParserDebug::TestTryParse<PrologDocument<VariableRule>>("operator(SetEnergy(?old,?new), del(Energy(?old)), add(Energy(?new)) ).", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule == nullptr));
-        
+
         rule = ParserDebug::TestTryParse<PrologDocument<VariableRule>>("method(MoveUnit(?unit, ?to), if(UnitIdle(?unit),At(?unit,?from)),   do(Move(?unit,?from,?to),SetEnergy(?energy,-(?energy,?moveCost))) ).", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule == nullptr));
-        
+
         // Query
         rule = ParserDebug::TestTryParse<PrologQuery<VariableRule>>("a(?X, a). \r\n", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule == nullptr));
+
+        // Lists
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[?X]", deepestFailure, errorMessage);
+        CHECK(htnStyle != (rule == nullptr));
         
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[a(?X, a), ?Y, [ ?z, [], ?a]]", deepestFailure, errorMessage);
+        CHECK(htnStyle != (rule == nullptr));
+
         
         // ************
         // These are the the same for both VariableRule alternates
@@ -342,7 +380,28 @@ SUITE(PrologCompilerTests)
         rule = ParserDebug::TestTryParse<PrologFunctor<VariableRule>>("a", deepestFailure, errorMessage);
         CHECK(rule != nullptr);
 
-        
+        // list
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[a]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[a, b]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ a , b ]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ a( b , c ) , b ]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ [ a( b , c(1, 2, 3) ) , b ] ]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ [], [[[a], b]], [] ]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
         // rule
         rule = ParserDebug::TestTryParse<PrologRule<VariableRule>>("a :- ", deepestFailure, errorMessage);
         CHECK(rule != nullptr);

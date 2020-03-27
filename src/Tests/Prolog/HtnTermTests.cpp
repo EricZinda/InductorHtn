@@ -8,6 +8,9 @@
 
 #include "FXPlatform/Prolog/HtnTerm.h"
 #include "FXPlatform/Prolog/HtnTermFactory.h"
+#include "FXPlatform/Prolog/PrologCompiler.h"
+#include "FXPlatform/Prolog/PrologQueryCompiler.h"
+#include "FXPlatform/Prolog/HtnRuleSet.h"
 #include <memory>
 #include "UnitTest++/UnitTest++.h"
 using namespace std;
@@ -20,6 +23,35 @@ SUITE(HtnTermTests)
         CHECK( factory->CreateConstantFunctor("a", {"b", "c"})->GetUniqueID() !=
               factory->CreateFunctor("a", {factory->CreateConstantFunctor("b", {"c"})})->GetUniqueID());
         
+    }
+    
+    void RoundTripExpr(shared_ptr<HtnTermFactory> factory, shared_ptr<HtnRuleSet> state, shared_ptr<HtnGoalResolver> resolver, string expr)
+    {
+        shared_ptr<PrologQueryCompiler> query = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(factory.get()));
+
+        CHECK(query->Compile("=(?X, " + expr + ")."));
+        shared_ptr<vector<UnifierType>> queryResult = resolver->ResolveAll(factory.get(), state.get(), query->result());
+        string result = HtnGoalResolver::ToString(queryResult.get());
+        CHECK_EQUAL("((?X = " + expr + "))", result);
+    }
+    
+    // Make sure list expressions round trip to test ToString()
+    TEST(HtnTermListToStringTest)
+    {
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<HtnGoalResolver> resolver = shared_ptr<HtnGoalResolver>(new HtnGoalResolver());
+        string result;
+        
+        // Ensure that lists get properly compiled into the internal form: .(first, .(second, []))
+        RoundTripExpr(factory, state, resolver, "[]");
+        RoundTripExpr(factory, state, resolver, "[a]");
+        RoundTripExpr(factory, state, resolver, "[a,b]");
+        RoundTripExpr(factory, state, resolver, "[a,b,[]]");
+        RoundTripExpr(factory, state, resolver, "[[],a,b,[]]");
+        RoundTripExpr(factory, state, resolver, "[[],[],[]]");
+        RoundTripExpr(factory, state, resolver, "[[a(b,c),[]],[],[]]");
+        RoundTripExpr(factory, state, resolver, "[a([a,[a([b],d)],c]),[]]");
     }
     
     // Compares using prolog comparison rules in order:

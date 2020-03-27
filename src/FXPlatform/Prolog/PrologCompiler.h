@@ -79,6 +79,9 @@ public:
     {
         switch(symbol->symbolID())
         {
+            case PrologSymbolID::PrologList:
+                return CreateTermFromList(factory, symbol);
+                break;
             case PrologSymbolID::PrologFunctor:
                 return CreateTermFromFunctor(factory, symbol);
                 break;
@@ -91,6 +94,27 @@ public:
             default:
                 StaticFailFastAssert(false);
                 return nullptr;
+        }
+    }
+    
+    static shared_ptr<HtnTerm> CreateTermFromList(HtnTermFactory *factory, shared_ptr<Symbol> prologList)
+    {
+        shared_ptr<Symbol> name = Compiler<PrologDocument<VariableRule>>::GetChild(prologList, 0, PrologSymbolID::PrologEmptyList);
+        if(name != nullptr)
+        {
+            return factory->CreateConstant("[]");
+        }
+        else
+        {
+            // Create a single functor like this: .(firstTerm, .(secondTerm, []))
+            shared_ptr<HtnTerm> lastTerm = factory->CreateConstant("[]");
+            for(int argIndex = (int) prologList->children().size() - 1; argIndex >= 0; argIndex--)
+            {
+                shared_ptr<Symbol> term = Compiler<PrologDocument<VariableRule>>::GetChild(prologList, argIndex, -1);
+                lastTerm = factory->CreateFunctor(".", { CreateTermFromItem(factory, term), lastTerm });
+            }
+            
+            return lastTerm;
         }
     }
     
@@ -271,6 +295,12 @@ protected:
         m_state->AddRule(m_termFactory->CreateConstant(symbol->ToString()), emptyTail);
     }
     
+    void ParseList(shared_ptr<Symbol> symbol)
+    {
+        vector<shared_ptr<HtnTerm>> emptyTail;
+        m_state->AddRule(CreateTermFromList(m_termFactory, symbol), emptyTail);
+    }
+
     virtual void ParseRule(shared_ptr<Symbol> symbol)
     {
         shared_ptr<Symbol> head = Compiler<PrologDocument<VariableRule>>::GetChild(symbol, 0, -1);
@@ -321,6 +351,9 @@ protected:
                     break;
                 case PrologSymbolID::PrologFunctor:
                     ParseTopLevelFunctor(item);
+                    break;
+                case PrologSymbolID::PrologList:
+                    ParseList(item);
                     break;
                 case PrologSymbolID::PrologRule:
                     ParseRule(item);

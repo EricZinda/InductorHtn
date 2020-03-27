@@ -31,6 +31,7 @@ namespace Prolog
     extern char PrologDocumentError[];
     extern char PrologCommentError[];
     extern char PrologQueryError[];
+    extern char PrologTailTermError[];
 
 	extern char BeginCommentBlock[];
     extern char CrlfString[];
@@ -51,9 +52,10 @@ namespace Prolog
 		SymbolDef(PrologQuery, CustomSymbolStart + 7);
         SymbolDef(PrologList, CustomSymbolStart + 8);
         SymbolDef(PrologEmptyList, CustomSymbolStart + 9);
+        SymbolDef(PrologTailTerm, CustomSymbolStart + 10);
 
         // Must be last so that other parsers can extend
-        SymbolDef(PrologMaxSymbol, CustomSymbolStart + 10);
+        SymbolDef(PrologMaxSymbol, CustomSymbolStart + 11);
     };
 
     //    a comment starts with % and can have anything after it until it hits a group of newline, carriage returns in any order and in any number
@@ -232,6 +234,7 @@ namespace Prolog
     <
         PrologTerm<VariableRule>,
         PrologOptionalWhitespace,
+        // zero or more terms with commas
         ZeroOrMoreExpression
         <
             AndExpression<Args
@@ -241,6 +244,17 @@ namespace Prolog
                 PrologTerm<VariableRule>,
                 PrologOptionalWhitespace
             >>
+        >,
+        // Could be followed by | and any single term
+        OptionalExpression
+        <
+            AndExpression<Args
+            <
+                CharacterSymbol<PipeString>,
+                PrologOptionalWhitespace,
+                PrologTerm<VariableRule>,
+                PrologOptionalWhitespace
+            >, FlattenType::None, PrologSymbolID::PrologTailTerm, PrologTermListError>
         >
     >, FlattenType::Flatten, SymbolID::andExpression, PrologTermListError>
     {

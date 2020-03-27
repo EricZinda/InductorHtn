@@ -33,6 +33,7 @@ namespace FXPlat
     char PercentString[] = "%";
     char PeriodString[] = ".";
     char PlusString[] = "+";
+    char PipeString[] = "|";
     char PoundString[] = "#";
     char QuestionMarkString[] = "?";
     char RightBracketString[] = "]";

@@ -21,6 +21,7 @@ namespace Prolog
     char PrologDocumentError[] = "Expected Prolog document (i.e. rules or facts, separated by '.'";
     char PrologCommentError[] = "Expected comment (e.g. '/* */' or '%')";
     char PrologQueryError[] = "Expected query (e.g. a(B).)";
+    char PrologTailTermError[] = "Expected | followed by a single term (e.g. [a | X].)";
 
     char emptyList[] = "[]";
 	char BeginCommentBlock[] = "/*";

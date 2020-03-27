@@ -111,7 +111,14 @@ public:
             for(int argIndex = (int) prologList->children().size() - 1; argIndex >= 0; argIndex--)
             {
                 shared_ptr<Symbol> term = Compiler<PrologDocument<VariableRule>>::GetChild(prologList, argIndex, -1);
-                lastTerm = factory->CreateFunctor(".", { CreateTermFromItem(factory, term), lastTerm });
+                if(term->symbolID() == PrologSymbolID::PrologTailTerm)
+                {
+                    lastTerm = CreateTermFromItem(factory, Compiler<PrologDocument<VariableRule>>::GetChild(term, 0, -1));
+                }
+                else
+                {
+                    lastTerm = factory->CreateFunctor(".", { CreateTermFromItem(factory, term), lastTerm });
+                }
             }
             
             return lastTerm;

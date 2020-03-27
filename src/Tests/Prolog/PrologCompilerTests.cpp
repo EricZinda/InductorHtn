@@ -242,6 +242,38 @@ SUITE(PrologCompilerTests)
         queryResult = resolver.ResolveAll(factory.get(), state.get(), query->result());
         result = HtnGoalResolver::ToString(queryResult.get());
         CHECK_EQUAL("((?B = [a,[]], ?A = [], ?D = [[]], ?C = a))", result);
+        
+        // Including lists with a Tail
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile("[a | [b]]."));
+        query = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(factory.get()));
+        CHECK(query->Compile(("'.'(?X, ?Y).")));
+        queryResult = resolver.ResolveAll(factory.get(), state.get(), query->result());
+        result = HtnGoalResolver::ToString(queryResult.get());
+        CHECK_EQUAL("((?Y = [b], ?X = a))", result);
+
+        // Including lists with a Tail
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile("[a|[b | [c]]]."));
+        query = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(factory.get()));
+        CHECK(query->Compile(("'.'(?X, ?Y).")));
+        queryResult = resolver.ResolveAll(factory.get(), state.get(), query->result());
+        result = HtnGoalResolver::ToString(queryResult.get());
+        CHECK_EQUAL("((?Y = [b,c], ?X = a))", result);
+
+        // This doesn't make a lot of sense in Prolog, but it is supported by other compilers so
+        // Let's test it
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile("[a | b]."));
+        query = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(factory.get()));
+        CHECK(query->Compile(("'.'(?X, ?Y).")));
+        queryResult = resolver.ResolveAll(factory.get(), state.get(), query->result());
+        result = HtnGoalResolver::ToString(queryResult.get());
+        CHECK_EQUAL("((?Y = b, ?X = a))", result);
+
     }
     
     template<class VariableRule>
@@ -302,7 +334,15 @@ SUITE(PrologCompilerTests)
         rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[a(?X, a), ?Y, [ ?z, [], ?a]]", deepestFailure, errorMessage);
         CHECK(htnStyle != (rule == nullptr));
 
-        
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[?A|?B]", deepestFailure, errorMessage);
+        CHECK(htnStyle != (rule == nullptr));
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ a, ?B, c | [ ?B ]]", deepestFailure, errorMessage);
+        CHECK(htnStyle != (rule == nullptr));
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ a, ?B, c | ?B ]", deepestFailure, errorMessage);
+        CHECK(htnStyle != (rule == nullptr));
+
         // ************
         // These are the the same for both VariableRule alternates
         // ************
@@ -401,6 +441,32 @@ SUITE(PrologCompilerTests)
 
         rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ [], [[[a], b]], [] ]", deepestFailure, errorMessage);
         CHECK(rule != nullptr);
+
+        // list with Tail
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[a | [b]]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ a, b, c | [ d ] ]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[a|[b | [c]]]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ a, b | c(d, e) ]", deepestFailure, errorMessage);
+        CHECK(rule != nullptr);
+
+        // list with Tail negative tests
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[a | ]", deepestFailure, errorMessage);
+        CHECK(rule == nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ | [ d ] ]", deepestFailure, errorMessage);
+        CHECK(rule == nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ a, b, c, | [ d ]]", deepestFailure, errorMessage);
+        CHECK(rule == nullptr);
+
+        rule = ParserDebug::TestTryParse<PrologList<VariableRule>>("[ a, b, c | [ d ], e ]", deepestFailure, errorMessage);
+        CHECK(rule == nullptr);
 
         // rule
         rule = ParserDebug::TestTryParse<PrologRule<VariableRule>>("a :- ", deepestFailure, errorMessage);

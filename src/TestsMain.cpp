@@ -13,7 +13,7 @@ class TestFilter
     {
         // Return true if the test matches the criteria for a test you want to run. Examples:
         // Just run this one test:
-//        return strcmp(test->m_details.testName, "PrologParserHtnVariableTests") == 0;
+//        return strcmp(test->m_details.testName, "HtnGoalResolverListTests") == 0;
         // Run just this suite of tests:
         //return strcmp(test->m_details.suiteName, "HtnPlannerTests") == 0;
         

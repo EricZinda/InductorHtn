@@ -587,6 +587,82 @@ SUITE(HtnGoalResolverTests)
         CHECK_EQUAL(finalUnifier, "((?Y = letter(?X), ?Z = capital(?X)))");
     }
    
+    TEST(HtnGoalResolverListTests)
+    {
+        HtnGoalResolver resolver;
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        string testState;
+        string goals;
+        string finalUnifier;
+        shared_ptr<vector<UnifierType>> unifier;
+
+//                SetTraceFilter((int) SystemTraceType::Planner | (int)SystemTraceType::Solver | (int) SystemTraceType::Unifier,  TraceDetail::Diagnostic);
+//        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
+
+        // ***** simplest positive case
+        compiler->Clear();
+        testState = string() +
+            "split([?Head | ?Tail], ?Head, ?Tail). "
+            "goals(split([a, b, c, d], ?Head, ?Tail)).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?Tail = [b,c,d], ?Head = a))");
+
+        // ***** classic list rule: member/2
+        compiler->Clear();
+        testState = string() +
+            "member(?X, [?X|_]).        % member(X, [Head|Tail]) is true if X = Head \r\n"
+            "                         % that is, if X is the head of the list\r\n"
+            "member(?X, [_|?Tail]) :-   % or if X is a member of Tail,\r\n"
+            "  member(?X, ?Tail).       % ie. if member(X, Tail) is true.\r\n"
+            "goals( member(a, [b, c, a, [d, e, f]]), not(member(d, [b, c, a, [d, e, f]])) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "(())");
+
+        // ***** classic list rule: append/3
+        compiler->Clear();
+        testState = string() +
+            "append([], ?Ys, ?Ys)."
+            "append([?X|?Xs], ?Ys, [?X|?Zs]) :- append(?Xs, ?Ys, ?Zs)."
+            "goals( append(?ListLeft, ?ListRight, [a, b, c]) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?ListRight = [a,b,c], ?ListLeft = []), (?ListLeft = [a], ?ListRight = [b,c]), (?ListLeft = [a,b], ?ListRight = [c]), (?ListLeft = [a,b,c], ?ListRight = []))");
+
+        // ***** classic list rule: reverse/2
+        compiler->Clear();
+        testState = string() +
+        "append([], ?Ys, ?Ys)."
+        "append([?X|?Xs], ?Ys, [?X|?Zs]) :- append(?Xs, ?Ys, ?Zs)."
+        "reverse([],[])."
+        "reverse([?X|?Xs],?YsX) :- reverse(?Xs,?Ys), append(?Ys,[?X],?YsX)."
+        "goals( reverse([a, b, foo(a, [a, b, c])], ?X) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = [foo(a,[a,b,c]),b,a]))");
+
+        // ***** class list rule: Len
+        compiler->Clear();
+        testState = string() +
+        "len([], 0).\r\n"
+        "len([_ | ?Tail], ?Length) :-\r\n"
+        "    len(?Tail, ?Length1),\r\n"
+        "    is(?Length, +(?Length1, 1)),!.\r\n"
+        "goals( len([[], b, foo(a, [a, b, c])], ?X) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = 3))");
+
+    }
+
     TEST(HtnGoalResolverAtomDowncaseTests)
     {
         HtnGoalResolver resolver;

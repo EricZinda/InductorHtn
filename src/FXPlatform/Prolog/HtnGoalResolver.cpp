@@ -491,6 +491,7 @@ HtnGoalResolver::HtnGoalResolver()
     AddCustomRule("count", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleCount, std::placeholders::_1)));
     AddCustomRule("distinct", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleDistinct, std::placeholders::_1)));
     AddCustomRule("failureContext", CustomRuleType({ CustomRuleArgType::SetOfTerms }, std::bind(&HtnGoalResolver::RuleFailureContext, std::placeholders::_1)));
+    AddCustomRule("findall", CustomRuleType({ CustomRuleArgType::Term, CustomRuleArgType::ResolvedTerm, CustomRuleArgType::ResolvedTerm }, std::bind(&HtnGoalResolver::RuleFindAll, std::placeholders::_1)));
     AddCustomRule("first", CustomRuleType({ CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleFirst, std::placeholders::_1)));
     AddCustomRule("forall", CustomRuleType({ CustomRuleArgType::ResolvedTerm, CustomRuleArgType::ResolvedTerm }, std::bind(&HtnGoalResolver::RuleForAll, std::placeholders::_1)));
     AddCustomRule("is", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::Arithmetic }, std::bind(&HtnGoalResolver::RuleIs, std::placeholders::_1)));
@@ -1625,6 +1626,102 @@ void HtnGoalResolver::RuleFailureContext(ResolveState *state)
             break;
     }
 }
+
+// findall(template, goal, bag)
+// Find all solutions for goal
+// create a list by looping through each solution unifying it with template
+// unify the list with bag
+void HtnGoalResolver::RuleFindAll(ResolveState *state)
+{
+    shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
+    shared_ptr<HtnTerm> goal = currentNode->currentGoal();
+    shared_ptr<vector<UnifierType>> &solutions = state->solutions;
+    shared_ptr<vector<shared_ptr<ResolveNode>>> &resolveStack = state->resolveStack;
+    HtnTermFactory *termFactory = state->termFactory;
+    
+    switch(currentNode->continuePoint)
+    {
+        case ResolveContinuePoint::CustomStart:
+        {
+            if(goal->arguments().size() < 3)
+            {
+                // Invalid program
+                Trace1("ERROR      ", "findall(template, goal, list) must have three terms: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
+                StaticFailFastAssertDesc(false, ("findall(template, goal, list) must have three terms: " + goal->ToString()).c_str());
+                currentNode->continuePoint = ResolveContinuePoint::ProgramError;
+            }
+            else
+            {
+                // Make sure we keep around the value of Variables in template and any variables in goal (they won't be there when we do the resolve, so they will get stripped out)
+                shared_ptr<ResolveNode::TermSetType> variablesToKeep = shared_ptr<ResolveNode::TermSetType>(new ResolveNode::TermSetType());
+                for(shared_ptr<HtnTerm> term : *currentNode->resolvent())
+                {
+                    term->GetAllVariables(variablesToKeep.get());
+                }
+
+                // Run the resolver just on the goal as if it were a standalone resolution.  Then continue on depending on what happens
+                currentNode->PushStandaloneResolve(state, variablesToKeep, ++goal->arguments().rbegin(), --goal->arguments().rend(), ResolveContinuePoint::CustomContinue1);
+            }
+        }
+        break;
+            
+        case ResolveContinuePoint::CustomContinue1:
+        {
+            // Solutions now contains just solutions to what was in the goal term
+            shared_ptr<HtnTerm> finalList;
+            if(solutions == nullptr)
+            {
+                // There were no solutions: succeed with an empty list!
+                finalList = termFactory->CreateList({});
+            }
+            else
+            {
+                // There were solutions. Loop through each solution and replace template variables with its assignments. Add that to the solution
+                shared_ptr<HtnTerm> templateTerm = goal->arguments()[0];
+                std::vector<std::shared_ptr<HtnTerm>> terms;
+                for(auto unification : *solutions)
+                {
+                    shared_ptr<HtnTerm> replacement = templateTerm;
+                    for(UnifierItemType item : unification)
+                    {
+                        replacement = replacement->SubstituteTermForVariable(termFactory, item.second, item.first);
+                    }
+                    terms.push_back(replacement);
+                }
+                
+                finalList = termFactory->CreateList(terms);
+            }
+            
+            // Just unify the two arguments
+            shared_ptr<UnifierType> unifyResult = Unify(termFactory, goal->arguments()[2], finalList);
+            if(unifyResult == nullptr)
+            {
+                // unification failed: fail!
+                Trace1("FAIL       ", "findall() rule failed to unify result with bag: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, HtnTerm::ToString((*currentNode->resolvent())[2]->arguments()));
+                state->RecordFailure(goal, currentNode);
+                resolveStack->pop_back();
+            }
+            else
+            {
+                // success! Treat this node as though it unified with a rule that resolved to true.
+                // Just like if we unified with a normal rule, we continue the depth first search skipping the current goal
+                // The unifiers we found get added to the list of unifiers
+                // No new goals were added since it just resolved to "true"
+                Trace1("           ", "findall() rule succeeded, new unification: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, ToString(*unifyResult));
+                resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, { *unifyResult }, &(state->uniquifier)));
+                currentNode->continuePoint = ResolveContinuePoint::Return;
+            }
+            
+            currentNode->PopStandaloneResolve(state);
+        }
+            break;
+            
+        default:
+            StaticFailFastAssert(false);
+            break;
+    }
+}
+
 
 // first(?SetOfResolvedTerms...)
 void HtnGoalResolver::RuleFirst(ResolveState *state)

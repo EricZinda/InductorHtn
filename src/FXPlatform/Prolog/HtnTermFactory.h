@@ -31,6 +31,7 @@ public:
     std::shared_ptr<HtnTerm> CreateConstant(int value);
     std::shared_ptr<HtnTerm> CreateConstantFunctor(const std::string &name, std::vector<std::string> arguments);
     std::shared_ptr<HtnTerm> CreateFunctor(const std::string &name, std::vector<std::shared_ptr<HtnTerm>> arguments);
+    std::shared_ptr<HtnTerm> CreateList(std::vector<std::shared_ptr<HtnTerm>> arguments);
     std::shared_ptr<HtnTerm> CreateVariable(const std::string &name);
     void DebugDumpAllocations();
     std::pair<int,int> EndTracking(const std::string &key);

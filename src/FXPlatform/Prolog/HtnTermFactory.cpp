@@ -55,6 +55,17 @@ shared_ptr<HtnTerm> HtnTermFactory::CreateFunctor(const string &name, vector<sha
     return GetInternedTerm(term);
 }
 
+std::shared_ptr<HtnTerm> HtnTermFactory::CreateList(std::vector<std::shared_ptr<HtnTerm>> arguments)
+{
+    shared_ptr<HtnTerm> lastTerm = CreateConstant("[]");
+    for(int index = (int)arguments.size() - 1; index >= 0; index--)
+    {
+        lastTerm = CreateFunctor(".", { arguments[index], lastTerm });
+    }
+    
+    return lastTerm;
+}
+
 shared_ptr<HtnTerm> HtnTermFactory::CreateVariable(const string &name)
 {
     m_termsCreated++;

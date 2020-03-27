@@ -1326,6 +1326,146 @@ SUITE(HtnGoalResolverTests)
 		//CHECK_EQUAL(finalUnifier, "((?After = Name2))");
 	}
 
+
+    TEST(HtnGoalResolverFindAllTests)
+    {
+        HtnGoalResolver resolver;
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        string testState;
+        string goals;
+        string finalUnifier;
+        shared_ptr<vector<UnifierType>> unifier;
+        
+//                SetTraceFilter((int) SystemTraceType::Planner | (int)SystemTraceType::Solver | (int) SystemTraceType::Unifier,  TraceDetail::Diagnostic);
+//        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
+
+        // ***** if there are no solutions, we get an empty list
+        compiler->Clear();
+        testState = string() +
+        "child(martha,charlotte)."
+        "child(charlotte,caroline)."
+        "child(caroline,laura)."
+        "child(laura,rose)."
+        "descend(?X,?Y)  :-  child(?X,?Y)."
+        "descend(?X,?Y)  :-  child(?X,?Z),"
+        "                    descend(?Z,?Y)."
+        "trace(?x) :- .\r\n"
+        "goals( findall(?X,descend(rose,?X),?Z) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?Z = []))");
+
+        // ***** simple single variable scenario with solutions and an extra goal to make sure
+        // unifiers flow
+        compiler->Clear();
+        testState = string() +
+        "child(martha,charlotte)."
+        "child(charlotte,caroline)."
+        "child(caroline,laura)."
+        "child(laura,rose)."
+        "descend(?X,?Y)  :-  child(?X,?Y)."
+        "descend(?X,?Y)  :-  child(?X,?Z),"
+        "                    descend(?Z,?Y)."
+        "trace(?x) :- .\r\n"
+        "goals( child(charlotte, ?A), findall(?X,descend(martha,?X),?Z), child(?A, ?B) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?A = caroline, ?Z = [charlotte,caroline,laura,rose], ?B = laura))");
+
+        // ***** complex template single variable scenario that succeeds
+        compiler->Clear();
+        testState = string() +
+        "child(martha,charlotte)."
+        "child(charlotte,caroline)."
+        "child(caroline,laura)."
+        "child(laura,rose)."
+        "descend(?X,?Y)  :-  child(?X,?Y)."
+        "descend(?X,?Y)  :-  child(?X,?Z),"
+        "                    descend(?Z,?Y)."
+        "trace(?x) :- .\r\n"
+        "goals( findall(fromMartha(?X),descend(martha,?X),?Z) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?Z = [fromMartha(charlotte),fromMartha(caroline),fromMartha(laura),fromMartha(rose)]))");
+
+        // ***** simple template multi variable scenario that succeeds
+        compiler->Clear();
+        testState = string() +
+        "child(martha,charlotte)."
+        "child(charlotte,caroline)."
+        "child(caroline,laura)."
+        "child(laura,rose)."
+        "descend(?X,?Y)  :-  child(?X,?Y)."
+        "descend(?X,?Y)  :-  child(?X,?Z),"
+        "                    descend(?Z,?Y)."
+        "trace(?x) :- .\r\n"
+        "goals( findall(?X,descend(?X,?Y),?Z) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?Z = [martha,charlotte,caroline,laura,martha,martha,martha,charlotte,charlotte,caroline]))");
+
+        
+        // ***** last argument should be unified with
+        compiler->Clear();
+        testState = string() +
+        "child(martha,charlotte)."
+        "child(charlotte,caroline)."
+        "child(caroline,laura)."
+        "child(laura,rose)."
+        "descend(?X,?Y)  :-  child(?X,?Y)."
+        "descend(?X,?Y)  :-  child(?X,?Z),"
+        "                    descend(?Z,?Y)."
+        "trace(?x) :- .\r\n"
+        "goals( findall(?X,descend(laura,?X),[?Z]) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?Z = rose))");
+        
+        // ***** scenario
+        // from: https://www.cpp.edu/~jrfisher/www/prolog_tutorial/2_15.html
+        compiler->Clear();
+        testState = string() +
+        "edge(1,2)."
+        "edge(1,4)."
+        "edge(1,3)."
+        "edge(2,3)."
+        "edge(2,5)."
+        "edge(3,4)."
+        "edge(3,5)."
+        "edge(4,5)."
+        "member(?X, [?X|_])."
+        "member(?X, [_|?Tail]) :-"
+        "  member(?X, ?Tail)."
+        "reverse([],[])."
+        "reverse([?X|?Xs],?YsX) :- reverse(?Xs,?Ys), append(?Ys,[?X],?YsX)."
+        "append([], ?Ys, ?Ys)."
+        "append([?X|?Xs], ?Ys, [?X|?Zs]) :- append(?Xs, ?Ys, ?Zs)."
+        "path(?A,?B,?Path) :-"
+        "       travel(?A,?B,[?A],?Q),"
+        "       reverse(?Q,?Path)."
+        "connected(?X,?Y) :- edge(?X,?Y)."
+        "connected(?X,?Y) :- edge(?Y,?X)."
+        "travel(?A,?B,?P,[?B|?P]) :-"
+        "       connected(?A,?B)."
+        "travel(?A,?B,?Visited,?Path) :-"
+        "       connected(?A,?C),"
+        "       \\==(?C, ?B),"
+        "       not(member(?C,?Visited)),"
+        "       travel(?C,?B,[?C|?Visited],?Path).";
+        goals = "goals( path(1, 2, ?Path) ).\r\n";
+        CHECK(compiler->Compile(testState + goals));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?Path = [1,2]), (?Path = [1,4,5,2]), (?Path = [1,4,5,3,2]), (?Path = [1,4,3,2]), (?Path = [1,4,3,5,2]), (?Path = [1,3,2]), (?Path = [1,3,4,5,2]), (?Path = [1,3,5,2]))");
+    }
+        
     TEST(HtnGoalResolverMinTests)
     {
         HtnGoalResolver resolver;

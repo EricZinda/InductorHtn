@@ -1,6 +1,7 @@
 #include <memory>
 #include <new> //For std::nothrow
 #include <stdio.h>
+#include "FXPlatform/Logger.h"
 #include "FXPlatform/Htn/HtnCompiler.h"
 #include "FXPlatform/Htn/HtnPlanner.h"
 #include "FXPlatform/Prolog/PrologQueryCompiler.h"
@@ -75,6 +76,12 @@ public:
 
 extern "C"  //Tells the compile to use C-linkage for the next scope.
 {
+    __declspec(dllexport) void __stdcall LogStdErrToFile(HtnPlannerPythonWrapper* ptr, char* pathAndFile)
+    {
+        string pathAndFileString(pathAndFile);
+        DebugLogMessagesToFile(pathAndFile);
+    }
+
     __declspec(dllexport) HtnPlannerPythonWrapper* __stdcall  CreateHtnPlanner(bool debug)
     {
         // Note: Inside the function body, I can use C++.
@@ -213,6 +220,7 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
             return GetCharPtrFromString(error.what());
         }
     }
+
 
     // Compile *adds* whatever is passed into the current state of the database
     __declspec(dllexport) char* __stdcall PrologCompile(HtnPlannerPythonWrapper* ptr, const char* data)

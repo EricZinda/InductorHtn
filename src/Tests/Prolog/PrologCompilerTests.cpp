@@ -274,6 +274,17 @@ SUITE(PrologCompilerTests)
         result = HtnGoalResolver::ToString(queryResult.get());
         CHECK_EQUAL("((?Y = b, ?X = a))", result);
 
+        // This doesn't make a lot of sense in Prolog either, but
+        // Let's test it and make sure ToString works properly
+        state->ClearAll();
+        compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        CHECK(compiler->Compile("test('.'(foo)).test2('.')."));
+        query = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(factory.get()));
+        CHECK(query->Compile(("test(?X), test2(?Y).")));
+        queryResult = resolver.ResolveAll(factory.get(), state.get(), query->result());
+        result = HtnGoalResolver::ToString(queryResult.get());
+        CHECK_EQUAL("((?X = .(foo), ?Y = .))", result);
+
     }
     
     template<class VariableRule>

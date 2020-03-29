@@ -863,7 +863,9 @@ string HtnTerm::ToString(bool isSecondTermInList, bool json)
     {
         // If this is a list we handle specially. Lists are internally formed like this:
         // .(a, .(b, [])) -> [a, b]
-        if(*m_namePtr == ".")
+        //
+        // If we are converting a list to json, we want every term in a json list
+        if(*m_namePtr == "." && m_arguments.size() == 2)
         {
             if(!isSecondTermInList)
             {

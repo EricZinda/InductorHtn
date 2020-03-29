@@ -7,6 +7,7 @@
 //
 #include <iostream>
 #include "FXPlatform/FileStream.h"
+#include "FXPlatform/Logger.h"
 #include "FXPlatform/Prolog/HtnGoalResolver.h"
 #include "FXPlatform/Prolog/HtnRuleSet.h"
 #include "FXPlatform/Prolog/HtnTerm.h"
@@ -68,7 +69,7 @@ bool CheckSolutions(vector<UnifierType> solution, vector<UnifierType> expectedSo
     
     return solution.size() == 0;
 }
-
+    
 SUITE(HtnGoalResolverTests)
 {
     TEST(AdventureScenarioTests)
@@ -99,7 +100,7 @@ SUITE(HtnGoalResolverTests)
         CHECK(compiler->Compile(example + sharedState + testState + goals));
         unifier = compiler->SolveGoals(&resolver, 1000000, &highestMemoryUsedReturn, &furthestFailureIndex, &farthestFailureContext);
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
-        int64_t factorySize = factory->dynamicSize();
+//        int64_t factorySize = factory->dynamicSize();
 //        CHECK_EQUAL(finalUnifier, "((?CreateOrEval = create, ?E9001 = id9007, ?X9002 = diamond1, ?X9003 = player))");
 //        CHECK_EQUAL(0, furthestFailureIndex);
 //        CHECK_EQUAL(0, farthestFailureContext.size());

@@ -5,19 +5,38 @@ import json
 
 
 # Prolog json term format used by the code below is:
-# A single Prolog term is a dictionary with one key that is the name of the term
-# Arguments are in a list. E.g.:
-# { "TermName": [{"Arg1TermName":[]}, {"Arg2TermName":[]}] }
+# A single Prolog term is either:
+#  1. a dictionary with one key that is the name of the term
+#       Arguments are in a list. E.g.:
+#       { "TermName": [{"Arg1TermName":[]}, {"Arg2TermName":[]}] }
+#  2. a Prolog list represented as a Python list (a list is also a term in Prolog):
+#       [{ "TermName": [{"Arg1TermName":[]}, {"Arg2TermName":[]}] }]
 def termArgs(term):
-    return list(term.values())[0]
+    if termIsList(term):
+        # really should call termIsList() and not call termArgs
+        return None
+    else:
+        return list(term.values())[0]
 
 
 def termIsConstant(term):
-    return len(termArgs(term)) == 0
+    if termIsList(term):
+        # really should call termIsList() and not call termName
+        return None
+    else:
+        return len(termArgs(term)) == 0
 
 
 def termName(term):
-    return list(term)[0]
+    if termIsList(term):
+        # really should call termIsList() and not call termName
+        return None
+    else:
+        return list(term)[0]
+
+
+def termIsList(term):
+    return isinstance(term, list)
 
 
 # Property converts all solutions (or errors) returned
@@ -47,16 +66,26 @@ def termListToString(termList):
 
 
 def termToString(term):
-    value = termName(term)
-    if not termIsConstant(term):
-        value += "("
-        hasArgs = False
-        for argTerm in termArgs(term):
-            if hasArgs:
+    if termIsList(term):
+        value = "["
+        hasItem = False
+        for listItem in term:
+            if hasItem:
                 value += ", "
-            value += termToString(argTerm)
-            hasArgs = True
-        value += ")"
+            value += termToString(listItem)
+            hasItem = True
+        value += "]"
+    else:
+        value = termName(term)
+        if not termIsConstant(term):
+            value += "("
+            hasArgs = False
+            for argTerm in termArgs(term):
+                if hasArgs:
+                    value += ", "
+                value += termToString(argTerm)
+                hasArgs = True
+            value += ")"
     return value
 
 
@@ -85,6 +114,7 @@ class HtnPlanner(object):
             sys.exit()
 
         # Declare all the function metadata
+        self.indhtnLib.SetMemoryBudget.argtypes = [ctypes.c_void_p, ctypes.c_int64]
         self.indhtnLib.CreateHtnPlanner.restype = ctypes.c_void_p
         self.indhtnLib.CreateHtnPlanner.argtypes = [ctypes.c_bool]
         self.indhtnLib.DeleteHtnPlanner.argtypes = [ctypes.c_void_p]
@@ -102,7 +132,7 @@ class HtnPlanner(object):
         self.indhtnLib.StandardPrologQuery.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_char))]
         self.indhtnLib.StandardPrologQuery.restype = ctypes.POINTER(ctypes.c_char)
         self.indhtnLib.SetDebugTracing.argtypes = [ctypes.c_int64]
-        self.indhtnLib.SetMemoryBudget.argtypes = [ctypes.c_void_p, ctypes.c_int64]
+        self.indhtnLib.LogStdErrToFile.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
 
         # Now create an instance of the object
         self.obj = self.indhtnLib.CreateHtnPlanner(debug)
@@ -115,6 +145,12 @@ class HtnPlanner(object):
     # i.e. 1K budget should be budgetBytes = 1024
     def SetMemoryBudget(self, budgetBytes):
         self.indhtnLib.SetMemoryBudget(self.obj, budgetBytes)
+
+    # In addition to logging to stderr, logs to this file.
+    # Clears the file every time it is called
+    # Pass "" to stop logging
+    def LogToFile(self, fileNameAndPath):
+        self.indhtnLib.LogStdErrToFile(self.obj, fileNameAndPath.encode('UTF-8', 'strict'))
 
     # Returns true if the index is in range, false otherwise
     def ApplySolution(self, index):

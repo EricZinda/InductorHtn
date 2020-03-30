@@ -55,6 +55,7 @@ public:
     int64_t dynamicSize() { return m_otherAllocations + m_stringAllocations; }
     int64_t otherAllocationSize() { return m_otherAllocations; }
     int64_t stringSize() { return m_stringAllocations; }
+    uint64_t &uniquifier() { return m_uniquifier; }
     
 private:
     std::map<std::string, std::shared_ptr<HtnCustomData>> m_customData;
@@ -135,6 +136,8 @@ private:
     std::shared_ptr<HtnTerm> m_true;
     const std::string *m_uniqueIDBuffer[MaxIndexTerms];
     std::string const ** m_uniqueIDBufferEnd;
+    // Global counter that is incremented every time it is used
+    uint64_t m_uniquifier;
 };
 
 #endif /* HtnTermFactory_hpp */

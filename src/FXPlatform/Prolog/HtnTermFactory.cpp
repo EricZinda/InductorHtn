@@ -15,7 +15,8 @@ HtnTermFactory::HtnTermFactory() :
     m_otherAllocations(MaxIndexTerms * sizeof(string *)),
     m_outOfMemory(false),
     m_stringAllocations(0),
-    m_termsCreated(0)
+    m_termsCreated(0),
+    m_uniquifier(0)
 {
     m_uniqueIDBufferEnd = m_uniqueIDBuffer + MaxIndexTerms;
 }

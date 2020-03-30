@@ -2691,6 +2691,7 @@ shared_ptr<UnifierType> HtnGoalResolver::Unify(HtnTermFactory *factory, shared_p
 {
     if(term1 == nullptr || term2 == nullptr) return nullptr;
     
+    uint64_t &uniquifier = factory->uniquifier();
 //    TraceString2("HtnGoalResolver::Unify {0}={1}",
 //                 SystemTraceType::Unifier, TraceDetail::Diagnostic,
 //                 term1->ToString(), term2->ToString());
@@ -2724,11 +2725,51 @@ shared_ptr<UnifierType> HtnGoalResolver::Unify(HtnTermFactory *factory, shared_p
         
         pair<shared_ptr<HtnTerm>, shared_ptr<HtnTerm>> current = remainingStack.back();
         remainingStack.pop_back();
-        shared_ptr<HtnTerm> x = current.first;
-        shared_ptr<HtnTerm> y = current.second;
+        // If X or Y is a "don't care" variable that hasn't been renamed yet, give it a unique value now
+        // We can do this because, by definition, every instance of "_" is a new variable
+        // So we don't have to fix them up in the resolvent to match
+        shared_ptr<HtnTerm> x;
+        bool xIsDontCare = false;
+        shared_ptr<HtnTerm> y;
+        bool yIsDontCare = false;
+        if(current.first->isVariable())
+        {
+            std::string name = current.first->name();
+            if(name.size() == 1 && name[0] == '_')
+            {
+                xIsDontCare = true;
+                x = factory->CreateVariable("_" + lexical_cast<string>(uniquifier++));
+            }
+            else
+            {
+                x = current.first;
+            }
+        }
+        else
+        {
+            x = current.first;
+        }
+
+        if(current.second->isVariable())
+        {
+            std::string name = current.second->name();
+            if(name.size() == 1 && name[0] == '_')
+            {
+                yIsDontCare = true;
+                y = factory->CreateVariable("_" + lexical_cast<string>(uniquifier++));
+            }
+            else
+            {
+                y = current.second;
+            }
+        }
+        else
+        {
+            y = current.second;
+        }
         
         // If X is a variable that does not occur in Y..
-        if(x->isVariable() && !y->OccursCheck(x))
+        if(x->isVariable() && (xIsDontCare || !y->OccursCheck(x)))
         {
             // Substitute Y for X in the stack and in the solution
             SubstituteAllVariables(factory, y, x, remainingStack, *solution);
@@ -2736,7 +2777,7 @@ shared_ptr<UnifierType> HtnGoalResolver::Unify(HtnTermFactory *factory, shared_p
             // add X = Y to solution
             solution->push_back(pair<shared_ptr<HtnTerm>, shared_ptr<HtnTerm>>(x, y));
         }
-        else if(y->isVariable() && !x->OccursCheck(y))
+        else if(y->isVariable() && (yIsDontCare || !x->OccursCheck(y)))
         {
             // Substitute X for Y in the stack and in the solution
             SubstituteAllVariables(factory, x, y, remainingStack, *solution);
@@ -2744,8 +2785,9 @@ shared_ptr<UnifierType> HtnGoalResolver::Unify(HtnTermFactory *factory, shared_p
             // add Y = X to solution
             solution->push_back(pair<shared_ptr<HtnTerm>, shared_ptr<HtnTerm>>(y, x));
         }
-        else if(((x->isVariable() && y->isVariable()) && x == y) ||
-                ((x->isConstant() && y->isConstant()) && x->nameEqualTo(*y)))
+        else if(!(xIsDontCare || yIsDontCare) &&
+                (((x->isVariable() && y->isVariable()) && x == y) ||
+                ((x->isConstant() && y->isConstant()) && x->nameEqualTo(*y))))
         {
             // X && Y are identical constants or Variables
             continue;

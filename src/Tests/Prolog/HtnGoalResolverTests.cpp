@@ -838,8 +838,8 @@ SUITE(HtnGoalResolverTests)
 		string goals;
 		string finalUnifier;
 		shared_ptr<vector<UnifierType>> unifier;
-//
-////        SetTraceFilter((int)SystemTraceType::Solver, TraceDetail::Diagnostic);
+
+//        SetTraceFilter((int)SystemTraceType::Solver, TraceDetail::Diagnostic);
         // ***** Make sure the same variables in terms of a conjunction get mapped to the same renamed variables
         compiler->Clear();
         testState = string() +
@@ -899,6 +899,52 @@ SUITE(HtnGoalResolverTests)
         unifier = compiler->SolveGoals();
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
         CHECK_EQUAL(finalUnifier, "((), ())");
+
+        // Rules with don't care variables should be matched by goals with anything
+        compiler->Clear();
+        testState = string() +
+            "test(_, _). \r\n" +
+            "goals( test(a, b) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL("(())", finalUnifier);
+
+        // Once a variable is renamed it shouldn't be again
+        compiler->Clear();
+        testState = string() +
+        "valid(a, b)."
+        "valid(a, c)."
+        "valid(b, c)."
+        "test(?X, ?Y) :- valid(?X, ?Y), test2(?X, ?Y)."
+        "test2(?X, ?Y) :- valid(?X, b)."
+        "goals( test(_, ?X) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL("((?X = b), (?X = c))", finalUnifier);
+        
+        // Rules with don't care variables should be matched by goals with don't care variables
+        compiler->Clear();
+        testState = string() +
+            "test(_, _) :- test2(_, _). \r\n" +
+            "test2(_, _). \r\n" +
+            "goals( test(_, _) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL("(())", finalUnifier);
+//
+        // Rules with don't care variables should be matched by goals with anything
+        compiler->Clear();
+        testState = string() +
+            "test(_, _) :- test2(_, _). \r\n" +
+            "test2(_, _). \r\n" +
+            "goals( test(a, b) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL("(())", finalUnifier);
 	}
     
     TEST(HtnGoalResolverForAllTests)

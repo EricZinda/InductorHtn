@@ -1236,14 +1236,12 @@ void HtnGoalResolver::RuleAtomChars(ResolveState* state)
     {
     case ResolveContinuePoint::CustomStart:
     {
-        if( !((goal->arguments().size() == 2) &&
-             ((goal->arguments()[0]->isVariable() && goal->arguments()[1]->isList()) ||
-             (goal->arguments()[1]->isVariable() && goal->arguments()[0]->isConstant()))))
+        if( !((goal->arguments().size() == 2) && !(goal->arguments()[0]->isVariable() && goal->arguments()[1]->isVariable())))
         {
             // Invalid program
-            Trace1("ERROR      ", "atom_chars() must have two terms one of which is not a variable. The right must be a list or a variable, the left must be an atom or variable:{0}",
+            Trace1("ERROR      ", "atom_chars() must have two terms and they both can't be variables: {0}",
                    state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
-            StaticFailFastAssertDesc(false, ("atom_chars() must have two terms that are not both variables. The right must be a list or a variable, the left must be an atom or variable: " +
+            StaticFailFastAssertDesc(false, ("atom_chars() must have two terms and they both can't be variables: " +
                                              goal->ToString()).c_str());
             currentNode->continuePoint = ResolveContinuePoint::ProgramError;
         }

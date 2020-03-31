@@ -697,6 +697,16 @@ SUITE(HtnGoalResolverTests)
         unifier = compiler->SolveGoals();
         finalUnifier = HtnGoalResolver::ToString(unifier.get());
         CHECK_EQUAL(finalUnifier, "((?X = pre, ?List = foo, ?Y = pre, ?Z = foo))");
+        
+        // ***** single atom_chars() goal that succeeds: more advanced case
+        // with unifiers on left and right to make sure they flow
+        compiler->Clear();
+        testState = string() +
+            "goals(=(?X, pre), atom_chars(foo, [?FirstChar | _]), =(?Y, ?X), =(?Z, ?FirstChar) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = pre, ?FirstChar = f, ?Y = pre, ?Z = f))");
     }
     
     TEST(HtnGoalResolverAtomDowncaseTests)

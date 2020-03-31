@@ -34,6 +34,7 @@ public:
     std::shared_ptr<HtnTerm> CreateList(std::vector<std::shared_ptr<HtnTerm>> arguments);
     std::shared_ptr<HtnTerm> CreateVariable(const std::string &name);
     void DebugDumpAllocations();
+    std::shared_ptr<HtnTerm> EmptyList();
     std::pair<int,int> EndTracking(const std::string &key);
     std::shared_ptr<HtnTerm> False();
     const std::string *GetInternedString(const std::string &value);
@@ -60,6 +61,8 @@ public:
 private:
     std::map<std::string, std::shared_ptr<HtnCustomData>> m_customData;
     std::shared_ptr<HtnTerm> m_false;
+    std::shared_ptr<HtnTerm> m_emptyList;
+
     // This can be anything, it represents the max number of terms we support
     // One array of strings of this size will be created
     static const int MaxIndexTerms = 256;

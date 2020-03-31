@@ -664,6 +664,41 @@ SUITE(HtnGoalResolverTests)
 
     }
 
+    TEST(HtnGoalResolverAtomCharsTests)
+    {
+        HtnGoalResolver resolver;
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<PrologCompiler> compiler = shared_ptr<PrologCompiler>(new PrologCompiler(factory.get(), state.get()));
+        string testState;
+        string goals;
+        string finalUnifier;
+        shared_ptr<vector<UnifierType>> unifier;
+
+        //        SetTraceFilter((int) SystemTraceType::Planner | (int)SystemTraceType::Solver | (int) SystemTraceType::Unifier,  TraceDetail::Diagnostic);
+//        SetTraceFilter( (int)SystemTraceType::Solver,  TraceDetail::Diagnostic);
+
+        // ***** single atom_chars() goal that succeeds: variable on right
+        // with unifiers on left and right to make sure they flow
+        compiler->Clear();
+        testState = string() +
+            "goals(=(?X, pre), atom_chars(foo, ?List), =(?Y, ?X), =(?Z, ?List) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = pre, ?List = [f,o,o], ?Y = pre, ?Z = [f,o,o]))");
+        
+        // ***** single atom_chars() goal that succeeds: variable on left
+        // with unifiers on left and right to make sure they flow
+        compiler->Clear();
+        testState = string() +
+            "goals(=(?X, pre), atom_chars(?List, [f, o, o]), =(?Y, ?X), =(?Z, ?List) ).\r\n";
+        CHECK(compiler->Compile(testState));
+        unifier = compiler->SolveGoals();
+        finalUnifier = HtnGoalResolver::ToString(unifier.get());
+        CHECK_EQUAL(finalUnifier, "((?X = pre, ?List = foo, ?Y = pre, ?Z = foo))");
+    }
+    
     TEST(HtnGoalResolverAtomDowncaseTests)
     {
         HtnGoalResolver resolver;

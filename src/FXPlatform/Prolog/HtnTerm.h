@@ -68,6 +68,7 @@ public:
 	bool isCut() const { return  *m_namePtr == "!";  }
     // We can compare pointers for equivalence because names are interned
     bool isEquivalentCompoundTerm(const HtnTerm *other) const { return arity() == other->arity() && m_namePtr == other->m_namePtr; }
+    bool isList() const { return (arity() == 0 && name() == "[]") || (arity() == 2 && name() == ".");  }
     bool isGround() const;
     void SetInterned() { m_isInterned = true; };
     bool isTrue() const { return !m_isVariable && *m_namePtr == "true"; }

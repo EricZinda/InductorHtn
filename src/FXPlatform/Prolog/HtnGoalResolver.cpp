@@ -488,6 +488,7 @@ HtnGoalResolver::HtnGoalResolver()
     AddCustomRule("assert", CustomRuleType({ CustomRuleArgType::Term }, std::bind(&HtnGoalResolver::RuleAssert, std::placeholders::_1)));
     AddCustomRule("atom_concat", CustomRuleType({ CustomRuleArgType::ResolvedTerm, CustomRuleArgType::ResolvedTerm, CustomRuleArgType::Variable }, std::bind(&HtnGoalResolver::RuleAtomConcat, std::placeholders::_1)));
     AddCustomRule("downcase_atom", CustomRuleType({ CustomRuleArgType::ResolvedTerm, CustomRuleArgType::Variable }, std::bind(&HtnGoalResolver::RuleAtomDowncase, std::placeholders::_1)));
+    AddCustomRule("atom_chars", CustomRuleType({ CustomRuleArgType::ResolvedTerm, CustomRuleArgType::Variable }, std::bind(&HtnGoalResolver::RuleAtomChars, std::placeholders::_1)));
     AddCustomRule("count", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleCount, std::placeholders::_1)));
     AddCustomRule("distinct", CustomRuleType({ CustomRuleArgType::Variable, CustomRuleArgType::SetOfResolvedTerms }, std::bind(&HtnGoalResolver::RuleDistinct, std::placeholders::_1)));
     AddCustomRule("failureContext", CustomRuleType({ CustomRuleArgType::SetOfTerms }, std::bind(&HtnGoalResolver::RuleFailureContext, std::placeholders::_1)));
@@ -1221,6 +1222,120 @@ void HtnGoalResolver::RuleAssert(ResolveState* state)
 			StaticFailFastAssert(false);
 			break;
 	}
+}
+
+// atom_chars(atom, List)
+void HtnGoalResolver::RuleAtomChars(ResolveState* state)
+{
+    shared_ptr<ResolveNode> currentNode = state->resolveStack->back();
+    shared_ptr<HtnTerm> goal = currentNode->currentGoal();
+    shared_ptr<vector<shared_ptr<ResolveNode>>>& resolveStack = state->resolveStack;
+    HtnTermFactory* termFactory = state->termFactory;
+
+    switch (currentNode->continuePoint)
+    {
+    case ResolveContinuePoint::CustomStart:
+    {
+        if( !((goal->arguments().size() == 2) &&
+             ((goal->arguments()[0]->isVariable() && goal->arguments()[1]->isList()) ||
+             (goal->arguments()[1]->isVariable() && goal->arguments()[0]->isConstant()))))
+        {
+            // Invalid program
+            Trace1("ERROR      ", "atom_chars() must have two terms one of which is not a variable. The right must be a list or a variable, the left must be an atom or variable:{0}",
+                   state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
+            StaticFailFastAssertDesc(false, ("atom_chars() must have two terms that are not both variables. The right must be a list or a variable, the left must be an atom or variable: " +
+                                             goal->ToString()).c_str());
+            currentNode->continuePoint = ResolveContinuePoint::ProgramError;
+        }
+        else
+        {
+            shared_ptr<HtnTerm> term1 = goal->arguments()[0];
+            shared_ptr<HtnTerm> term2 = goal->arguments()[1];
+            
+            if(term1->isVariable())
+            {
+                // The left side is a variable, right side must be a list (due to checks above), convert it to a term
+                shared_ptr<HtnTerm> front = term2;
+                string atomName;
+                while(front->name() == "." && front->arity() == 2 && !front->arguments()[0]->isVariable())
+                {
+                    string currentChar = front->arguments()[0]->name();
+                    if(currentChar.size() == 1)
+                    {
+                        atomName.push_back(currentChar[0]);
+                        front = front->arguments()[1];
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                
+                if(atomName.size() == 0)
+                {
+                    // unification failed: fail!
+                    Trace1("FAIL       ", "atom_chars/2 rule failed because right side is empty string: {1}", state->initialIndent + resolveStack->size(), state->fullTrace, goal->ToString());
+                    state->RecordFailure(goal, currentNode);
+                    resolveStack->pop_back();
+                }
+                else
+                {
+                    // Unify new term with left
+                    shared_ptr<HtnTerm> newTerm = termFactory->CreateConstant(atomName);
+                    shared_ptr<UnifierType> unifyResult = Unify(termFactory, goal->arguments()[0], newTerm);
+                    
+                    // Must work because it is a variable
+                    StaticFailFastAssert(unifyResult != nullptr);
+                    
+                    // success! Treat this node as though it unified with a rule that resolved to true.
+                    // Just like if we unified with a normal rule, we continue the depth first search skipping the current goal
+                    // The unifiers we found get added to the list of unifiers
+                    // No new goals were added since it just resolved to "true"
+                    Trace1("           ", "atom_chars/2 rule succeeded, new unification: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, ToString(*unifyResult));
+                    resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, { *unifyResult }, &(state->uniquifier)));
+                    currentNode->continuePoint = ResolveContinuePoint::Return;
+                }
+            }
+            else
+            {
+                // The right side is a variable or a list
+                // convert left into a list
+                string name = term1->name();
+                vector<shared_ptr<HtnTerm>> elements;
+                for(char c : name)
+                {
+                    elements.push_back(termFactory->CreateConstant(std::string(1, c)));
+                }
+                shared_ptr<HtnTerm> finalList = termFactory->CreateList(elements);
+                
+                // Unify with right
+                shared_ptr<UnifierType> unifyResult = Unify(termFactory, goal->arguments()[1], finalList);
+                if(unifyResult == nullptr)
+                {
+                    // unification failed: fail!
+                    Trace2("FAIL       ", "atom_chars/2 rule failed to unify {0} with: {1}", state->initialIndent + resolveStack->size(), state->fullTrace, finalList->ToString(), goal->arguments()[1]->ToString());
+                    state->RecordFailure(goal, currentNode);
+                    resolveStack->pop_back();
+                }
+                else
+                {
+                    // success! Treat this node as though it unified with a rule that resolved to true.
+                    // Just like if we unified with a normal rule, we continue the depth first search skipping the current goal
+                    // The unifiers we found get added to the list of unifiers
+                    // No new goals were added since it just resolved to "true"
+                    Trace1("           ", "atom_chars/2 rule succeeded, new unification: {0}", state->initialIndent + resolveStack->size(), state->fullTrace, ToString(*unifyResult));
+                    resolveStack->push_back(currentNode->CreateChildNode(termFactory, *state->initialGoals, {}, { *unifyResult }, &(state->uniquifier)));
+                    currentNode->continuePoint = ResolveContinuePoint::Return;
+                }
+            }
+        }
+    }
+    break;
+
+    default:
+        StaticFailFastAssert(false);
+        break;
+    }
 }
 
 // downcase_atom(a, ?A)

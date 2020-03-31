@@ -102,12 +102,12 @@ public:
         shared_ptr<Symbol> name = Compiler<PrologDocument<VariableRule>>::GetChild(prologList, 0, PrologSymbolID::PrologEmptyList);
         if(name != nullptr)
         {
-            return factory->CreateConstant("[]");
+            return factory->EmptyList();
         }
         else
         {
             // Create a single functor like this: .(firstTerm, .(secondTerm, []))
-            shared_ptr<HtnTerm> lastTerm = factory->CreateConstant("[]");
+            shared_ptr<HtnTerm> lastTerm = factory->EmptyList();
             for(int argIndex = (int) prologList->children().size() - 1; argIndex >= 0; argIndex--)
             {
                 shared_ptr<Symbol> term = Compiler<PrologDocument<VariableRule>>::GetChild(prologList, argIndex, -1);

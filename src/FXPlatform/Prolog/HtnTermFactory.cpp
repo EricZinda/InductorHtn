@@ -58,7 +58,7 @@ shared_ptr<HtnTerm> HtnTermFactory::CreateFunctor(const string &name, vector<sha
 
 std::shared_ptr<HtnTerm> HtnTermFactory::CreateList(std::vector<std::shared_ptr<HtnTerm>> arguments)
 {
-    shared_ptr<HtnTerm> lastTerm = CreateConstant("[]");
+    shared_ptr<HtnTerm> lastTerm = EmptyList();
     for(int index = (int)arguments.size() - 1; index >= 0; index--)
     {
         lastTerm = CreateFunctor(".", { arguments[index], lastTerm });
@@ -94,6 +94,16 @@ void HtnTermFactory::DebugDumpAllocations()
     {
         if(++count > 1000) break;
     }
+}
+
+shared_ptr<HtnTerm> HtnTermFactory::EmptyList()
+{
+    if(m_emptyList == nullptr)
+    {
+        m_emptyList = CreateConstant("[]");
+    }
+    
+    return m_emptyList;
 }
 
 pair<int,int> HtnTermFactory::EndTracking(const string &key)

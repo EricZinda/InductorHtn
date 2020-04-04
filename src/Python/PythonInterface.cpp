@@ -40,9 +40,8 @@ public:
         // Methods as well as having the code that implements the HTN algorithm
         m_planner = shared_ptr<HtnPlanner>(new HtnPlanner());
 
-        // The HtnCompiler will uses the standard Prolog syntax *except* that 
-        // variables start with ? and capitalization doesn't mean anything special
-        m_compiler = shared_ptr<HtnCompiler>(new HtnCompiler(m_factory.get(), m_state.get(), m_planner.get()));
+        // The HtnCompiler will uses the standard Prolog syntax
+        m_compiler = shared_ptr<HtnStandardCompiler>(new HtnStandardCompiler(m_factory.get(), m_state.get(), m_planner.get()));
 
         // PrologStandardCompiler uses all of the Prolog standard syntax
         m_prologCompiler = shared_ptr<PrologStandardCompiler>(new PrologStandardCompiler(m_factory.get(), m_state.get()));
@@ -53,7 +52,7 @@ public:
 
 public:
     uint64_t m_budgetBytes;
-    shared_ptr<HtnCompiler> m_compiler;
+    shared_ptr<HtnStandardCompiler> m_compiler;
     shared_ptr<PrologStandardCompiler> m_prologCompiler;
     shared_ptr<HtnTermFactory> m_factory;
     // We save the last set of solutions so their state can be applied if the user chooses to

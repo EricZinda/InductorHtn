@@ -10,24 +10,23 @@ import pprint
 # seen on windows with https://docs.microsoft.com/en-us/sysinternals/downloads/debugview
 # These traces are much like the standard Prolog traces and will help you understand how 
 # the queries and HTN tasks are running and what path they are taking
-test = HtnPlanner(True)
+test = HtnPlanner(False)
 
 
 # HtnPlanner.HtnCompile()
 # Compile a program which includes both HTN and Prolog statements
-# The HtnCompile() uses the standard Prolog syntax *except* that 
-# variables start with ? and capitalization doesn't mean anything special
+# The HtnCompile() uses the standard Prolog syntax
 # Calling HtnCompile() multiple times will keep adding statements to the database.
 # You will get an error if some already exist
 prog = """
-travel-to(?q) :- 
-        if(at(?p), walking-distance(?p, ?q)), 
-        do(walk(?p, ?q)).
-    walk(?here, ?there) :- 
-        del(at(?here)), add(at(?there)).
-    walking-distance(?u,?v) :- weather-is(good), 
-                               distance(?u,?v,?w), =<(?w, 3).
-    walking-distance(?u,?v) :- distance(?u,?v,?w), =<(?w, 0.5).
+travel-to(Q) :- 
+        if(at(P), walking-distance(P, Q)), 
+        do(walk(P, Q)).
+    walk(Here, There) :- 
+        del(at(Here)), add(at(There)).
+    walking-distance(U,V) :- weather-is(good), 
+                               distance(U,V,W), =<(W, 3).
+    walking-distance(U,V) :- distance(U,V,W), =<(W, 0.5).
     distance(downtown, park, 2).
     distance(downtown, uptown, 8).
     at(downtown).
@@ -82,8 +81,7 @@ pp = pprint.PrettyPrinter(indent=4)
 pp.pprint(answer)
 
 # HtnPlanner.PrologQuery()
-# Run a standard Prolog query using the Htn syntax where variables don't have to be
-# capitalized, but must have a ? in front
+# Run a standard Prolog query
 # results are always returned with a ? in front of the name, however
 # results are returned in Json format (described farther down)
 success, result = test.PrologQuery("at(Where).")

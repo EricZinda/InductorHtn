@@ -275,6 +275,8 @@ bool MethodComparer(const pair<HtnMethod *, UnifierType> &left, const pair<HtnMe
 }
 
 PlanState::PlanState(HtnTermFactory *factoryArg, shared_ptr<HtnRuleSet> initialStateArg, const vector<shared_ptr<HtnTerm>> &initialGoals, int64_t memoryBudgetArg) :
+    furthestCriteriaFailure(-1),
+    deepestTaskFailure(-1),
     factory(factoryArg),
     highestMemoryUsed(0),
     initialState(initialStateArg),
@@ -311,6 +313,8 @@ int64_t PlanState::dynamicSize()
         initialState->dynamicSharedSize() +
         // memory used by all terms
         factory->dynamicSize() +
+        // memory used for failurecontext
+        furthestCriteriaFailureContext.size() * sizeof(std::shared_ptr<HtnTerm>) +
         // memory used by everything on the stack
         stack->size() * sizeof(shared_ptr<PlanNode>) + stackSize;
     
@@ -318,6 +322,21 @@ int64_t PlanState::dynamicSize()
     CheckHighestMemory(currentMemory, "stackSize", stackSize);
     
     return currentMemory;
+}
+
+// We want to record error context for the failure that happened:
+// Deepest in the "resolving tasks" stack
+// and if there is more than one failure at the same level of that stack
+// record the failure that happened farthest along in the list of terms in the criteria
+void PlanState::RecordFailure(int furthestCriteriaFailure, std::vector<std::shared_ptr<HtnTerm>> &criteriaFailureContext)
+{
+    if((this->stack->size() == this->deepestTaskFailure && (furthestCriteriaFailure > this->furthestCriteriaFailure)) ||
+       ((int) stack->size() > this->deepestTaskFailure))
+    {
+        this->deepestTaskFailure = stack->size();
+        this->furthestCriteriaFailure = furthestCriteriaFailure;
+        this->furthestCriteriaFailureContext = criteriaFailureContext;
+    }
 }
 
 HtnPlanner::HtnPlanner() :
@@ -607,7 +626,8 @@ shared_ptr<HtnPlanner::SolutionType> HtnPlanner::FindPlan(HtnTermFactory *factor
     return solution;
 }
 
-shared_ptr<HtnPlanner::SolutionsType> HtnPlanner::FindAllPlans(HtnTermFactory *factory, shared_ptr<HtnRuleSet> initialState, const vector<shared_ptr<HtnTerm>> &initialGoals, int memoryBudget)
+shared_ptr<HtnPlanner::SolutionsType> HtnPlanner::FindAllPlans(HtnTermFactory *factory, shared_ptr<HtnRuleSet> initialState, const vector<shared_ptr<HtnTerm>> &initialGoals, int memoryBudget,
+                                                               int64_t *highestMemoryUsedReturn, int *furthestFailureIndex, std::vector<std::shared_ptr<HtnTerm>> *furthestFailureContext)
 {
     Trace1("ALL BEGIN  ", "Goals:{0}", 0, HtnTerm::ToString(initialGoals));
     shared_ptr<HtnPlanner::SolutionsType> finalSolutions;
@@ -632,6 +652,25 @@ shared_ptr<HtnPlanner::SolutionsType> HtnPlanner::FindAllPlans(HtnTermFactory *f
 
         Trace0("BEGIN      ", "Find next plan", 0);
         nextSolution = FindNextPlan(planState.get());
+    }
+    
+    if(highestMemoryUsedReturn != nullptr)
+    {
+        *highestMemoryUsedReturn = planState->highestMemoryUsed;
+    }
+    
+    if(finalSolutions == nullptr)
+    {
+        // There were no solutions, set the error
+        if(furthestFailureIndex != nullptr)
+        {
+            *furthestFailureIndex = planState->deepestTaskFailure;
+        }
+        
+        if(furthestFailureContext != nullptr)
+        {
+            *furthestFailureContext = planState->furthestCriteriaFailureContext;
+        }
     }
     
     Trace3("ALL END    ", "Solution:'{0}', Budget:{1}, HighestMemory:{2}", 0, HtnPlanner::ToStringSolutions(finalSolutions), memoryBudget, planState->highestMemoryUsed);
@@ -784,6 +823,8 @@ shared_ptr<HtnPlanner::SolutionType> HtnPlanner::FindNextPlan(PlanState *planSta
                     // See if the constraints are met for this method by applying the unifier above to the constraint and then seeing if it is satisfied by the current
                     // state (meaning reducing it returns only ground state)
                     shared_ptr<vector<shared_ptr<HtnTerm>>> substitutedCondition;
+                    std::vector<std::shared_ptr<HtnTerm>> farthestCriteriaFailureContext;
+                    int furthestCriteriaFailureIndex = -1;
                     if(node->method.first->condition().size() == 0)
                     {
                         // Empty condition, resolves to ground by definition
@@ -799,7 +840,8 @@ shared_ptr<HtnPlanner::SolutionType> HtnPlanner::FindNextPlan(PlanState *planSta
                         // Subtract off current memory usage from budget to tell Resolve how much it has to work with
                         int64_t currentMemory = planState->dynamicSize();
                         int64_t resolverMemory = 0;
-                        node->conditionResolutions = m_resolver->ResolveAll(factory, node->state.get(), *substitutedCondition, (int) (stack->size() + 1), (int) (memoryBudget - currentMemory), &resolverMemory);
+                        node->conditionResolutions = m_resolver->ResolveAll(factory, node->state.get(), *substitutedCondition, (int) (stack->size() + 1), (int) (memoryBudget - currentMemory),
+                                                                            &resolverMemory, &furthestCriteriaFailureIndex, &farthestCriteriaFailureContext);
                         planState->CheckHighestMemory(currentMemory + resolverMemory, "Resolver", resolverMemory);
                         if(factory->outOfMemory())
                         {
@@ -814,6 +856,9 @@ shared_ptr<HtnPlanner::SolutionType> HtnPlanner::FindNextPlan(PlanState *planSta
                         Trace1("FAIL       ", "0 condition alternatives for method '{0}'", stack->size(), node->method.first->ToString());
                         Trace1("           ", "substituted condition '{0}'", stack->size(), HtnTerm::ToString(*substitutedCondition));
                         node->continuePoint = PlanNodeContinuePoint::NextMethodThatApplies;
+                        
+                        // Remember the failure context if this is deepest
+                        planState->RecordFailure(furthestCriteriaFailureIndex, farthestCriteriaFailureContext);
                         continue;
                     }
                     else

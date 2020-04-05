@@ -35,9 +35,14 @@ private:
     friend class PlanNode;
 
     void CheckHighestMemory(int64_t currentMemory, std::string extra1Name, int64_t extra1Size);
+    void RecordFailure(int furthestCriteriaFailure, std::vector<std::shared_ptr<HtnTerm>> &criteriaFailureContext);
     int64_t dynamicSize();
 
     // *** Remember to update dynamicSize() if you change any member variables!
+    int furthestCriteriaFailure;
+    std::shared_ptr<HtnTerm> furthestCriteriaFailureGoal;
+    std::vector<std::shared_ptr<HtnTerm>> furthestCriteriaFailureContext;
+    int deepestTaskFailure;
     HtnTermFactory *factory;
     int64_t highestMemoryUsed;
     std::shared_ptr<HtnRuleSet> initialState;
@@ -85,7 +90,8 @@ public:
     virtual HtnOperator *AddOperator(std::shared_ptr<HtnTerm>head, const std::vector<std::shared_ptr<HtnTerm>> &addList, const std::vector<std::shared_ptr<HtnTerm>> &deleteList, bool hidden = false);
     virtual void ClearAll();
     // Always check factory->outOfMemory() after calling to see if we ran out of memory during processing and the plan might not be complete
-    std::shared_ptr<SolutionsType> FindAllPlans(HtnTermFactory *factory, std::shared_ptr<HtnRuleSet> initialState, const std::vector<std::shared_ptr<HtnTerm>> &initalGoals, int memoryBudget = 5000000);
+    std::shared_ptr<SolutionsType> FindAllPlans(HtnTermFactory *factory, std::shared_ptr<HtnRuleSet> initialState, const std::vector<std::shared_ptr<HtnTerm>> &initialGoals, int memoryBudget = 5000000,
+                                                int64_t *highestMemoryUsedReturn = nullptr, int *furthestFailureIndex = nullptr, std::vector<std::shared_ptr<HtnTerm>> *furthestFailureContext = nullptr);
     // Always check factory->outOfMemory() after calling to see if we ran out of memory during processing and the plan might not be complete
     std::shared_ptr<SolutionType> FindPlan(HtnTermFactory *factory, std::shared_ptr<HtnRuleSet> initialState, std::vector<std::shared_ptr<HtnTerm>> &initialGoals, int memoryBudget = 5000000);
     // Always check factory->outOfMemory() after calling to see if we ran out of memory during processing and the plan might not be complete

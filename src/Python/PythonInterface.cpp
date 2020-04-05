@@ -150,61 +150,45 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
             // The PrologQueryCompiler will compile Prolog queries using the normal
             // Prolog parsing rules *except* that variables start with ? and
             // capitalization doesn't mean anything special
-            shared_ptr<PrologQueryCompiler> queryCompiler = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(ptr->m_factory.get()));
+            shared_ptr<PrologStandardQueryCompiler> queryCompiler = shared_ptr<PrologStandardQueryCompiler>(new PrologStandardQueryCompiler(ptr->m_factory.get()));
 
             if (queryCompiler->Compile(queryString))
             {
+                int64_t highestMemoryUsedReturn;
+                int furthestFailureIndex;
+                std::vector<std::shared_ptr<HtnTerm>> farthestFailureContext;
+
                 ptr->m_lastSolutions = ptr->m_planner->FindAllPlans(ptr->m_factory.get(),
                                                                     ptr->m_state,
                                                                     queryCompiler->result(),
-                                                                    ptr->m_budgetBytes);
-                *result = GetCharPtrFromString(HtnPlanner::ToStringSolutions(ptr->m_lastSolutions, true));
-
-                return nullptr;
-            }
-            else
-            {
-                *result = nullptr;
-                return GetCharPtrFromString(queryCompiler->GetErrorString());
-            }
-        }
-        catch (runtime_error & error)
-        {
-            *result = nullptr;
-            return GetCharPtrFromString(error.what());
-        }
-    }
-
-    __declspec(dllexport) char* __stdcall HtnQuery(HtnPlannerPythonWrapper* ptr, char* queryChars, char** result)
-    {
-        // Catch any FailFasts and return their description
-        TreatFailFastAsException(true);
-        try
-        {
-            string queryString = string(queryChars);
-
-            // The PrologQueryCompiler will compile Prolog queries using the normal
-            // Prolog parsing rules *except* that variables start with ? and
-            // capitalization doesn't mean anything special
-            shared_ptr<PrologQueryCompiler> queryCompiler = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(ptr->m_factory.get()));
-
-            if (queryCompiler->Compile(queryString))
-            {
-                // The resolver can give one answer at a time using ResolveNext(), or just get them all using ResolveAll()
-                shared_ptr<vector<UnifierType>> queryResult = ptr->m_resolver->ResolveAll(ptr->m_factory.get(),
-                                                                                          ptr->m_state.get(),
-                                                                                          queryCompiler->result(),
-                                                                                          0,
-                                                                                          ptr->m_budgetBytes);
-                if (queryResult == nullptr)
+                                                                    ptr->m_budgetBytes,
+                                                                    &highestMemoryUsedReturn,
+                                                                    &furthestFailureIndex,
+                                                                    &farthestFailureContext);
+                
+                if(ptr->m_factory->outOfMemory())
                 {
-                    *result = GetCharPtrFromString("{\"False\" :[]}");
+                    string outOfMemoryString =  "out of memory: Budget:" + lexical_cast<string>(ptr->m_budgetBytes) +
+                                               ", Highest total memory used: " + lexical_cast<string>(highestMemoryUsedReturn) +
+                                               ", Memory used only by term names: " + lexical_cast<string>(ptr->m_factory->dynamicSize()) +
+                                               ", The difference was probably used by the resolver, either in its stack memory or memory used by the number of terms that unify with a single term. Turn on tracing to see more details.";
+                    *result = nullptr;
+                    return GetCharPtrFromString(outOfMemoryString);
+                }
+                else if(ptr->m_lastSolutions == nullptr)
+                {
+                    string failureContextString;
+                    if(farthestFailureContext.size() > 0)
+                    {
+                        failureContextString = ", " + HtnTerm::ToString(farthestFailureContext, false, true);
+                    }
+                    *result = GetCharPtrFromString("[{\"false\" :[]}, {\"failureIndex\" :[{\"-1\" :[]}]}" + failureContextString + "]");
                 }
                 else
                 {
-                    *result = GetCharPtrFromString(HtnGoalResolver::ToString(queryResult.get(), true));
+                    *result = GetCharPtrFromString(HtnPlanner::ToStringSolutions(ptr->m_lastSolutions, true));
                 }
-
+                
                 return nullptr;
             }
             else
@@ -219,7 +203,6 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
             return GetCharPtrFromString(error.what());
         }
     }
-
 
     // Compile *adds* whatever is passed into the current state of the database
     __declspec(dllexport) char* __stdcall PrologCompile(HtnPlannerPythonWrapper* ptr, const char* data)
@@ -265,7 +248,7 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
 
     // returns result in Json format
     // if the query failed, it will be a False term
-    __declspec(dllexport) char* __stdcall StandardPrologQuery(HtnPlannerPythonWrapper* ptr, char* queryChars, char** result)
+    __declspec(dllexport) char* __stdcall PrologQuery(HtnPlannerPythonWrapper* ptr, char* queryChars, char** result)
     {
         // Catch any FailFasts and return their description
         TreatFailFastAsException(true);
@@ -307,7 +290,7 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
                     {
                         failureContextString = ", " + HtnTerm::ToString(farthestFailureContext, false, true);
                     }
-                    *result = GetCharPtrFromString("[{\"False\" :[]}, {\"failureIndex\" :[{\"" + lexical_cast<string>(furthestFailureIndex) + "\" :[]}]}" + failureContextString + "]");
+                    *result = GetCharPtrFromString("[{\"false\" :[]}, {\"failureIndex\" :[{\"" + lexical_cast<string>(furthestFailureIndex) + "\" :[]}]}" + failureContextString + "]");
                 }
                 else
                 {

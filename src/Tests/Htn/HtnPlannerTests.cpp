@@ -20,6 +20,103 @@ using namespace Prolog;
 
 SUITE(HtnPlannerTests)
 {
+    TEST(ErrorContextTest)
+    {
+        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+        shared_ptr<HtnPlanner> planner = shared_ptr<HtnPlanner>(new HtnPlanner());
+        shared_ptr<HtnCompiler> compiler = shared_ptr<HtnCompiler>(new HtnCompiler(factory.get(), state.get(), planner.get()));
+        shared_ptr<HtnPlanner::SolutionsType> result;
+        string finalFacts;
+        string finalPlan;
+        string testState;
+        string sharedState;
+        string goals;
+        shared_ptr<vector<UnifierType>> unifier;
+        int64_t memoryUsed;
+        int deepestFailureIndex;
+        std::vector<std::shared_ptr<HtnTerm>> deepestFailureContext;
+        string failureContext;
+        
+        // State true for all tests
+        sharedState = string() +
+        "";
+
+        // no failure context
+        compiler->ClearWithNewRuleSet();
+        testState = string() +
+        "failInCriteria(?Value) :- if(false), do(trace(?Value))."
+        "trace(?Value) :- del(), add(?Value). \r\n" +
+        "";
+        goals = string() +
+        "goals(failInCriteria(test)).\r\n" +
+        "";
+        CHECK(compiler->Compile(sharedState + testState + goals));
+        result = planner->FindAllPlans(factory.get(), compiler->compilerOwnedRuleSet(), compiler->goals(), 5000000,
+                                       &memoryUsed, &deepestFailureIndex, &deepestFailureContext);
+        finalPlan = HtnPlanner::ToStringSolutions(result);
+        failureContext = HtnTerm::ToString(deepestFailureContext);
+        CHECK_EQUAL("null", finalPlan);
+        CHECK_EQUAL("()", failureContext);
+        
+        // simplest case
+        compiler->ClearWithNewRuleSet();
+        testState = string() +
+        "failInCriteria(?Value) :- if(failureContext(tag, 1), false), do(trace(?Value))."
+        "trace(?Value) :- del(), add(?Value). \r\n" +
+        "";
+        goals = string() +
+        "goals(failInCriteria(test)).\r\n" +
+        "";
+        CHECK(compiler->Compile(sharedState + testState + goals));
+        result = planner->FindAllPlans(factory.get(), compiler->compilerOwnedRuleSet(), compiler->goals(), 5000000,
+                                       &memoryUsed, &deepestFailureIndex, &deepestFailureContext);
+        finalPlan = HtnPlanner::ToStringSolutions(result);
+        failureContext = HtnTerm::ToString(deepestFailureContext);
+        CHECK_EQUAL("null", finalPlan);
+        CHECK_EQUAL("(tag, 1)", failureContext);
+        
+        // first criteria fails further in the criteria term list
+        compiler->ClearWithNewRuleSet();
+        testState = string() +
+        "failInCriteria(?Value) :- if(=(?X, 1), failureContext(tag, 1), failTask([1,2,3]) ), do(trace(?Value))."
+        "failInCriteria(?Value) :- if(failureContext(tag, 2), failTask([1,2]) ), do(trace(?Value))."
+        "trace(?Value) :- del(), add(?Value). \r\n"
+        "failTask([]) :- false."
+        "failTask([_|T]) :- failTask(T)."
+        "";
+        goals = string() +
+        "goals(failInCriteria(test)).\r\n" +
+        "";
+        CHECK(compiler->Compile(sharedState + testState + goals));
+        result = planner->FindAllPlans(factory.get(), compiler->compilerOwnedRuleSet(), compiler->goals(), 5000000,
+                                       &memoryUsed, &deepestFailureIndex, &deepestFailureContext);
+        finalPlan = HtnPlanner::ToStringSolutions(result);
+        failureContext = HtnTerm::ToString(deepestFailureContext);
+        CHECK_EQUAL("null", finalPlan);
+        CHECK_EQUAL("(tag, 1)", failureContext);
+        
+        // second criteria fails further in the criteria term list
+        compiler->ClearWithNewRuleSet();
+        testState = string() +
+        "failInCriteria(?Value) :- if(failureContext(tag, 1), failTask([1,2]) ), do(trace(?Value))."
+        "failInCriteria(?Value) :- if(=(?X, 1), failureContext(tag, 2), failTask([1,2,3]) ), do(trace(?Value))."
+        "trace(?Value) :- del(), add(?Value). \r\n"
+        "failTask([]) :- false."
+        "failTask([_|T]) :- failTask(T)."
+        "";
+        goals = string() +
+        "goals(failInCriteria(test)).\r\n" +
+        "";
+        CHECK(compiler->Compile(sharedState + testState + goals));
+        result = planner->FindAllPlans(factory.get(), compiler->compilerOwnedRuleSet(), compiler->goals(), 5000000,
+                                       &memoryUsed, &deepestFailureIndex, &deepestFailureContext);
+        finalPlan = HtnPlanner::ToStringSolutions(result);
+        failureContext = HtnTerm::ToString(deepestFailureContext);
+        CHECK_EQUAL("null", finalPlan);
+        CHECK_EQUAL("(tag, 2)", failureContext);
+    }
+    
     TEST(PlannerOperatorTest)
     {
         shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());

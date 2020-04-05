@@ -71,19 +71,20 @@ pp.pprint(solutions)
 # Run a standard Prolog query using the Htn syntax where variables don't have to be
 # capitalized, but must have a ? in front
 # results are returned in Json format (described farther down)
-success, result = test.HtnQuery("human(?who).")
-if success is not None:
-    print("HtnQuery error: " + success)
-    sys.exit()
-answer = json.loads(result)
-print("HtnQuery result:")
-pp = pprint.PrettyPrinter(indent=4)
-pp.pprint(answer)
 
 # HtnPlanner.PrologQuery()
 # Run a standard Prolog query
 # results are always returned with a ? in front of the name, however
 # results are returned in Json format (described farther down)
+success, result = test.PrologQuery("human(Who).")
+if success is not None:
+    print("PrologQuery error: " + success)
+    sys.exit()
+answer = json.loads(result)
+print("PrologQuery result:")
+pp = pprint.PrettyPrinter(indent=4)
+pp.pprint(answer)
+
 success, result = test.PrologQuery("at(Where).")
 if success is not None:
     print("PrologQuery error: " + success)

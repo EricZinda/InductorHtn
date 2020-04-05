@@ -39,12 +39,12 @@ def termIsList(term):
     return isinstance(term, list)
 
 
-# Property converts all solutions (or errors) returned
-# from a prolog query into a set of strings with Prolog predicates
+# Properly converts all solutions (or errors) returned
+# from a prolog query into a list of strings with Prolog predicates
 def queryResultToPrologStringList(queryResult):
     jsonQuery = json.loads(queryResult)
     solutionList = []
-    if "False" in jsonQuery[0]:
+    if "false" in jsonQuery[0]:
         # Query failed, so it is not a unification list it
         # is a term list
         solutionList.append(termListToString(jsonQuery))
@@ -57,12 +57,26 @@ def queryResultToPrologStringList(queryResult):
 
     return solutionList
 
+# Properly converts all solutions (or errors) returned from FindAllPlans()
+# into a list of strings with Prolog predicates
+def findAllPlansResultToPrologStringList(queryResult):
+    jsonSolutions = json.loads(queryResult)
+    solutionList = []
+    if "false" in jsonSolutions[0]:
+        # failed, so it is not a list of solutions it
+        # is a term list
+        solutionList.append(termListToString(jsonSolutions))
+    else:
+        for solution in jsonSolutions:
+            solutionList.append(termListToString(solution))
+
+    return solutionList
 
 def termListToString(termList):
     termStringList = []
     for term in termList:
         termStringList.append(termToString(term))
-    return ",".join(termStringList)
+    return ", ".join(termStringList)
 
 
 def termToString(term):
@@ -127,10 +141,8 @@ class HtnPlanner(object):
         self.indhtnLib.FreeString.argtypes = [ctypes.POINTER(ctypes.c_char)]
         self.indhtnLib.HtnFindAllPlans.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_char))]
         self.indhtnLib.HtnFindAllPlans.restype = ctypes.POINTER(ctypes.c_char)
-        self.indhtnLib.HtnQuery.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_char))]
-        self.indhtnLib.HtnQuery.restype = ctypes.POINTER(ctypes.c_char)
-        self.indhtnLib.StandardPrologQuery.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_char))]
-        self.indhtnLib.StandardPrologQuery.restype = ctypes.POINTER(ctypes.c_char)
+        self.indhtnLib.PrologQuery.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_char))]
+        self.indhtnLib.PrologQuery.restype = ctypes.POINTER(ctypes.c_char)
         self.indhtnLib.SetDebugTracing.argtypes = [ctypes.c_int64]
         self.indhtnLib.LogStdErrToFile.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
 
@@ -173,8 +185,15 @@ class HtnPlanner(object):
         return resultBytes
 
     # returns compileError, solutions
-    # compileError = None if no compile error, or a string error message
-    # solutions = None if there were no solutions
+    # compileError = None if no compile error, or a string error message OR a string that starts with "out of memory:"
+    #       if it runs out of memory. If it does run out of memory, call SetMemoryBudget() with a larger number and try again
+    # solutions = will always be a json string that contains one of two cases:
+    #   - If there were no solutions it will be a list of Prolog json terms, the Prolog equivalent is:
+    #       False, failureIndex(-1), ...Any Terms in FailureContext...
+    #       Unlike PrologQuery it will NOT give you an index of the initial goal that failed it will always be -1.  Just not implemented.
+    #   - If there were solutions it will be a list containing all the solutions
+    #       each solution is a list of terms which are the operations that represent the plan
+    # If it runs out of memory it throws
     def FindAllPlans(self, str):
         # Pointer to pointer conversion: https://stackoverflow.com/questions/4213095/python-and-ctypes-how-to-correctly-pass-pointer-to-pointer-into-dll
         mem = ctypes.POINTER(ctypes.c_char)()
@@ -186,28 +205,7 @@ class HtnPlanner(object):
         else:
             resultQuery = ctypes.c_char_p.from_buffer(mem).value.decode()
             self.indhtnLib.FreeString(mem)
-            if resultQuery == "":
-                return None, None
-            else:
-                return None, resultQuery
-
-    # returns compileError, solutions
-    # compileError = None if no compile error, or a string error message
-    # solutions = "" if there were no solutions
-    def HtnQuery(self, str):
-        mem = ctypes.POINTER(ctypes.c_char)()
-        resultPtr = self.indhtnLib.HtnQuery(self.obj, str.encode('UTF-8', 'strict'), ctypes.byref(mem))
-        resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
-        if resultBytes is not None:
-            self.indhtnLib.FreeString(resultPtr)
-            return resultBytes.decode(), None
-        else:
-            resultQuery = ctypes.c_char_p.from_buffer(mem).value.decode()
-            self.indhtnLib.FreeString(mem)
-            if resultQuery == "":
-                return None, None
-            else:
-                return None, resultQuery
+            return None, resultQuery
 
     # returns compileError, solutions
     # compileError = None if no compile error, or a string error message OR a string that starts with "out of memory:"
@@ -220,7 +218,7 @@ class HtnPlanner(object):
     # If it runs out of memory it throws
     def PrologQuery(self, str):
         mem = ctypes.POINTER(ctypes.c_char)()
-        resultPtr = self.indhtnLib.StandardPrologQuery(self.obj, str.encode('UTF-8', 'strict'), ctypes.byref(mem))
+        resultPtr = self.indhtnLib.PrologQuery(self.obj, str.encode('UTF-8', 'strict'), ctypes.byref(mem))
         resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
         if resultBytes is not None:
             self.indhtnLib.FreeString(resultPtr)

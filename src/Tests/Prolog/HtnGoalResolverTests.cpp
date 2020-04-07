@@ -96,7 +96,7 @@ SUITE(HtnGoalResolverTests)
         testState = "";
 
         compiler->Clear();
-        goals = "goals(=(CreateOrEval,create), d_the_q(conj(d_noun(donkey,X9005),conj(isInstance(X9005)))), d_noun(place,X9006), d_loc_nonsp(E9004,X9005,X9006,CreateOrEval)).";
+        goals = "goals(=(CreateOrEval, create), d_noun(place, X9005), d_pronoun(you, X9006), d_loc_nonsp(E9004, X9006, X9005, CreateOrEval)).";
         CHECK(compiler->Compile(example + sharedState + testState + goals));
         unifier = compiler->SolveGoals(&resolver, 1000000, &highestMemoryUsedReturn, &furthestFailureIndex, &farthestFailureContext);
         finalUnifier = HtnGoalResolver::ToString(unifier.get());

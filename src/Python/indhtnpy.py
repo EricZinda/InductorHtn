@@ -2,6 +2,9 @@ import sys, platform
 import ctypes, ctypes.util
 from sys import platform
 import json
+import logging
+from time import perf_counter_ns
+perfLogger = logging.getLogger('indhtnpy.performance')
 
 
 # Prolog json term format used by the code below is:
@@ -168,16 +171,24 @@ class HtnPlanner(object):
     def ApplySolution(self, index):
         return self.indhtnLib.HtnApplySolution(self.obj, index)
 
-    def HtnCompile(self, str):
-        resultPtr = self.indhtnLib.HtnCompile(self.obj, str.encode('UTF-8', 'strict'))
+    def HtnCompile(self, value):
+        startTime = perf_counter_ns()
+        resultPtr = self.indhtnLib.HtnCompile(self.obj, value.encode('UTF-8', 'strict'))
+        elapsedTimeNS = perf_counter_ns() - startTime
+        perfLogger.info("HtnCompile %s ms", str(elapsedTimeNS / 1000000))
+
         resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
         if resultBytes is not None:
             self.indhtnLib.FreeString(resultPtr)
             return resultBytes.decode()
         return resultBytes
 
-    def PrologCompile(self, str):
-        resultPtr = self.indhtnLib.PrologCompile(self.obj, str.encode('UTF-8', 'strict'))
+    def PrologCompile(self, value):
+        startTime = perf_counter_ns()
+        resultPtr = self.indhtnLib.PrologCompile(self.obj, value.encode('UTF-8', 'strict'))
+        elapsedTimeNS = perf_counter_ns() - startTime
+        perfLogger.info("PrologCompile %s ms", str(elapsedTimeNS / 1000000))
+
         resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
         if resultBytes is not None:
             self.indhtnLib.FreeString(resultPtr)
@@ -194,10 +205,15 @@ class HtnPlanner(object):
     #   - If there were solutions it will be a list containing all the solutions
     #       each solution is a list of terms which are the operations that represent the plan
     # If it runs out of memory it throws
-    def FindAllPlans(self, str):
+    def FindAllPlans(self, value):
         # Pointer to pointer conversion: https://stackoverflow.com/questions/4213095/python-and-ctypes-how-to-correctly-pass-pointer-to-pointer-into-dll
         mem = ctypes.POINTER(ctypes.c_char)()
-        resultPtr = self.indhtnLib.HtnFindAllPlans(self.obj, str.encode('UTF-8', 'strict'), ctypes.byref(mem))
+
+        startTime = perf_counter_ns()
+        resultPtr = self.indhtnLib.HtnFindAllPlans(self.obj, value.encode('UTF-8', 'strict'), ctypes.byref(mem))
+        elapsedTimeNS = perf_counter_ns() - startTime
+        perfLogger.info("FindAllPlans %s ms: %s", str(elapsedTimeNS / 1000000), value)
+
         resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
         if resultBytes is not None:
             self.indhtnLib.FreeString(resultPtr)
@@ -216,9 +232,14 @@ class HtnPlanner(object):
     #   - If there were solutions it will be a list containing all the solutions
     #       each is a dictionary where the keys are variable names and the values are what they are assigned to
     # If it runs out of memory it throws
-    def PrologQuery(self, str):
+    def PrologQuery(self, value):
         mem = ctypes.POINTER(ctypes.c_char)()
-        resultPtr = self.indhtnLib.PrologQuery(self.obj, str.encode('UTF-8', 'strict'), ctypes.byref(mem))
+
+        startTime = perf_counter_ns()
+        resultPtr = self.indhtnLib.PrologQuery(self.obj, value.encode('UTF-8', 'strict'), ctypes.byref(mem))
+        elapsedTimeNS = perf_counter_ns() - startTime
+        perfLogger.info("PrologQuery %s ms: %s", str(elapsedTimeNS / 1000000), value)
+
         resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
         if resultBytes is not None:
             self.indhtnLib.FreeString(resultPtr)
@@ -230,3 +251,4 @@ class HtnPlanner(object):
 
     def __del__(self): 
         self.indhtnLib.DeleteHtnPlanner(self.obj)
+

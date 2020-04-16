@@ -246,6 +246,46 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
         ptr->m_budgetBytes = budgetBytes;
     }
 
+    __declspec(dllexport) char* __stdcall PrologQueryToJson(HtnPlannerPythonWrapper* ptr, char* queryChars, char** result)
+    {
+        // Catch any FailFasts and return their description
+        TreatFailFastAsException(true);
+        try
+        {
+            string queryString = string(queryChars);
+
+            // The PrologStandardQueryCompiler will compile Prolog queries using the normal
+            // Prolog parsing rules requiring Capitalization of variables
+            shared_ptr<PrologStandardQueryCompiler> queryCompiler = shared_ptr<PrologStandardQueryCompiler>(new PrologStandardQueryCompiler(ptr->m_factory.get()));
+
+            if(queryCompiler->Compile(queryString))
+            {
+                auto queryResult = queryCompiler->result();
+                
+                if(queryResult.size() == 0)
+                {
+                    *result = GetCharPtrFromString("[{\"false\" :[]}]");
+                }
+                else
+                {
+                    *result = GetCharPtrFromString(HtnTerm::ToString(queryResult, false, true));
+                }
+
+                return nullptr;
+            }
+            else
+            {
+                *result = nullptr;
+                return GetCharPtrFromString(queryCompiler->GetErrorString());
+            }
+        }
+        catch (runtime_error & error)
+        {
+            *result = nullptr;
+            return GetCharPtrFromString(error.what());
+        }
+    }
+
     // returns result in Json format
     // if the query failed, it will be a False term
     __declspec(dllexport) char* __stdcall PrologQuery(HtnPlannerPythonWrapper* ptr, char* queryChars, char** result)

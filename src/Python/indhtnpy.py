@@ -148,6 +148,8 @@ class HtnPlanner(object):
         self.indhtnLib.PrologQuery.restype = ctypes.POINTER(ctypes.c_char)
         self.indhtnLib.SetDebugTracing.argtypes = [ctypes.c_int64]
         self.indhtnLib.LogStdErrToFile.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        self.indhtnLib.PrologQueryToJson.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_char))]
+        self.indhtnLib.PrologQueryToJson.restype = ctypes.POINTER(ctypes.c_char)
 
         # Now create an instance of the object
         self.obj = self.indhtnLib.CreateHtnPlanner(debug)
@@ -204,7 +206,6 @@ class HtnPlanner(object):
     #       Unlike PrologQuery it will NOT give you an index of the initial goal that failed it will always be -1.  Just not implemented.
     #   - If there were solutions it will be a list containing all the solutions
     #       each solution is a list of terms which are the operations that represent the plan
-    # If it runs out of memory it throws
     def FindAllPlans(self, value):
         # Pointer to pointer conversion: https://stackoverflow.com/questions/4213095/python-and-ctypes-how-to-correctly-pass-pointer-to-pointer-into-dll
         mem = ctypes.POINTER(ctypes.c_char)()
@@ -231,7 +232,6 @@ class HtnPlanner(object):
     #       False, failureIndex(*Index of term in original query that failed*), ...Any Terms in FailureContext...
     #   - If there were solutions it will be a list containing all the solutions
     #       each is a dictionary where the keys are variable names and the values are what they are assigned to
-    # If it runs out of memory it throws
     def PrologQuery(self, value):
         mem = ctypes.POINTER(ctypes.c_char)()
 
@@ -239,6 +239,35 @@ class HtnPlanner(object):
         resultPtr = self.indhtnLib.PrologQuery(self.obj, value.encode('UTF-8', 'strict'), ctypes.byref(mem))
         elapsedTimeNS = perf_counter_ns() - startTime
         perfLogger.info("PrologQuery %s ms: %s", str(elapsedTimeNS / 1000000), value)
+
+        resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
+        if resultBytes is not None:
+            self.indhtnLib.FreeString(resultPtr)
+            return resultBytes.decode(), None
+        else:
+            resultQuery = ctypes.c_char_p.from_buffer(mem).value.decode()
+            self.indhtnLib.FreeString(mem)
+            return None, resultQuery
+
+
+    # returns compileError, json
+    # compileError = None if no compile error, or a string error message OR a string that starts with "out of memory:"
+    #       if it runs out of memory. If it does run out of memory, call SetMemoryBudget() with a larger number and try again
+    # json = will always be a json string that contains one of two cases:
+    #   - If there were no solutions it will be a list of Prolog json terms, the Prolog equivalent is:
+    #       False, failureIndex(*Index of term in original query that failed*), ...Any Terms in FailureContext...
+    #   - If there were solutions it will be a list containing all the solutions
+    #       each is a dictionary where the keys are variable names and the values are what they are assigned to
+    def PrologQueryToJson(self, value):
+        if value.strip() == "":
+            return None, ""
+
+        mem = ctypes.POINTER(ctypes.c_char)()
+
+        startTime = perf_counter_ns()
+        resultPtr = self.indhtnLib.PrologQueryToJson(self.obj, value.encode('UTF-8', 'strict'), ctypes.byref(mem))
+        elapsedTimeNS = perf_counter_ns() - startTime
+        perfLogger.info("PrologQueryToJson %s ms: %s", str(elapsedTimeNS / 1000000), value)
 
         resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
         if resultBytes is not None:

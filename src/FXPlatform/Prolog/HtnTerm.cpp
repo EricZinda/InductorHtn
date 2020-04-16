@@ -852,7 +852,14 @@ string HtnTerm::ToString(bool isSecondTermInList, bool json)
     {
         if (json)
         {
-            stream << "{\"" << *m_namePtr << "\":[]}";
+            if(isVariable())
+            {
+                stream << "{\"" << m_namePtr->substr(1) << "\":[]}";
+            }
+            else
+            {
+                stream << "{\"" << *m_namePtr << "\":[]}";
+            }
         }
         else
         {

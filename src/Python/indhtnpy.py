@@ -18,6 +18,9 @@ def termArgs(term):
     if termIsList(term):
         # really should call termIsList() and not call termArgs
         return None
+    elif not isinstance(term, dict):
+        # handle variables as terms
+        return None
     else:
         return list(term.values())[0]
 
@@ -27,7 +30,12 @@ def termIsConstant(term):
         # really should call termIsList() and not call termName
         return None
     else:
-        return len(termArgs(term)) == 0
+        args = termArgs(term)
+        if args is None:
+            # is a variable
+            return True
+        else:
+            return len(args) == 0
 
 
 def termName(term):

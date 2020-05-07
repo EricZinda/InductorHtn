@@ -858,7 +858,35 @@ string HtnTerm::ToString(bool isSecondTermInList, bool json)
             }
             else
             {
-                stream << "{\"" << *m_namePtr << "\":[]}";
+                string test = *m_namePtr;
+                // If it starts with a number and is a legitimate number, don't escape it
+                if(test[0] >= '0' && test[0] <= '9')
+                {
+                    HtnTermType type = GetTermType();
+                    if(type == HtnTermType::IntType || type == HtnTermType::FloatType)
+                    {
+                        stream << "{\"" << test << "\":[]}";
+                    }
+                    else
+                    {
+                        stream << "{\"'" << test << "'\":[]}";
+                    }
+                }
+                else
+                {
+                    // If it starts with uppercase or _ it must be escaped or it gets confused with a variable
+                    // otherwise we escape anything but A-Z and a-z and _
+                    if(!(test[0] >= 'a' && test[0] <= 'z') ||
+                       (test.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_") != string::npos))
+                    {
+                        stream << "{\"'" << test << "'\":[]}";
+
+                    }
+                    else
+                    {
+                        stream << "{\"" << test << "\":[]}";
+                    }
+                }
             }
         }
         else

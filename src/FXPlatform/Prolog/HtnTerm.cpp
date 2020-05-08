@@ -848,7 +848,12 @@ int HtnTerm::TermCompare(const HtnTerm &other)
 string HtnTerm::ToString(bool isSecondTermInList, bool json)
 {
     stringstream stream;
-    if(isConstant() || isVariable())
+    if(isList() && arity() == 0)
+    {
+        // Empty list
+        return "[]";
+    }
+    else if(isConstant() || isVariable())
     {
         if (json)
         {

@@ -24,9 +24,9 @@ SUITE(HtnTermTests)
 
         // Anything with a capitol letter or _ that starts it must be escaped
         // Any character not in ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_ forces escaping
-        CHECK(query->Compile("d_named('Plage'), !, d_named('_flage'), d_named('Pla ge'), d_named('Pla!ge'), d_named('pl_age'), d_named('pl1age'), d_named(12.4), d_named(5), d_named('5a')."));
+        CHECK(query->Compile("d_named('Plage'), !, d_named('_flage'), d_named('Pla ge'), d_named('Pla!ge'), d_named('pl_age'), d_named('pl1age'), d_named(12.4), d_named(5), d_named('5a'), d_named([])."));
         string result = HtnTerm::ToString(query->result(), false, true);
-        CHECK_EQUAL("{\"d_named\":[{\"'Plage'\":[]}]}, {\"'!'\":[]}, {\"d_named\":[{\"'_flage'\":[]}]}, {\"d_named\":[{\"'Pla ge'\":[]}]}, {\"d_named\":[{\"'Pla!ge'\":[]}]}, {\"d_named\":[{\"pl_age\":[]}]}, {\"d_named\":[{\"pl1age\":[]}]}, {\"d_named\":[{\"12.4\":[]}]}, {\"d_named\":[{\"5\":[]}]}, {\"d_named\":[{\"'5a'\":[]}]}", result);
+        CHECK_EQUAL("{\"d_named\":[{\"'Plage'\":[]}]}, {\"'!'\":[]}, {\"d_named\":[{\"'_flage'\":[]}]}, {\"d_named\":[{\"'Pla ge'\":[]}]}, {\"d_named\":[{\"'Pla!ge'\":[]}]}, {\"d_named\":[{\"pl_age\":[]}]}, {\"d_named\":[{\"pl1age\":[]}]}, {\"d_named\":[{\"12.4\":[]}]}, {\"d_named\":[{\"5\":[]}]}, {\"d_named\":[{\"'5a'\":[]}]}, {\"d_named\":[[]]}", result);
     }
     
     TEST(HtnTermUniqueID)

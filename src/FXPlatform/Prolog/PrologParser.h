@@ -112,6 +112,15 @@ namespace Prolog
 			CharacterSymbol<ExclamationPointString, FlattenType::None>,
             AndExpression<Args
             <
+                CharacterSymbol<DoubleQuoteString, FlattenType::None>,
+                ZeroOrMoreExpression
+                <
+                    CharacterSetExceptSymbol<DoubleQuoteString>
+                >,
+                CharacterSymbol<DoubleQuoteString, FlattenType::None>
+            >>,
+            AndExpression<Args
+            <
 				CharacterSymbol<SingleQuoteString>,
 				ZeroOrMoreExpression
 				<

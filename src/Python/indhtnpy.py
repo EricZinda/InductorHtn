@@ -91,7 +91,9 @@ def termListToString(termList):
 
 
 def termToString(term):
-    if termIsList(term):
+    if isinstance(term, str):
+        return term
+    elif termIsList(term):
         value = "["
         hasItem = False
         for listItem in term:

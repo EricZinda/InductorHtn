@@ -58,14 +58,14 @@ public:
     int64_t stringSize() { return m_stringAllocations; }
     uint64_t &uniquifier() { return m_uniquifier; }
     
+    // This can be anything, it represents the max number of terms we support
+    // One array of strings of this size will be created
+    static const int MaxIndexTerms = 4096;
+
 private:
     std::map<std::string, std::shared_ptr<HtnCustomData>> m_customData;
     std::shared_ptr<HtnTerm> m_false;
     std::shared_ptr<HtnTerm> m_emptyList;
-
-    // This can be anything, it represents the max number of terms we support
-    // One array of strings of this size will be created
-    static const int MaxIndexTerms = 256;
 
     struct stringPtrLess
     {

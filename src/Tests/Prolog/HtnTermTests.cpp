@@ -20,13 +20,19 @@ SUITE(HtnTermTests)
     TEST(JsonTest)
     {
         shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
-        shared_ptr<PrologQueryCompiler> query = shared_ptr<PrologQueryCompiler>(new PrologQueryCompiler(factory.get()));
+        shared_ptr<PrologStandardQueryCompiler> query = shared_ptr<PrologStandardQueryCompiler>(new PrologStandardQueryCompiler(factory.get()));
 
-        // Anything with a capitol letter or _ that starts it must be escaped
+        // Anything with a capital letter or _ that starts it must be escaped
         // Any character not in ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_ forces escaping
         CHECK(query->Compile("d_named('Plage'), !, d_named('_flage'), d_named('Pla ge'), d_named('Pla!ge'), d_named('pl_age'), d_named('pl1age'), d_named(12.4), d_named(5), d_named('5a'), d_named([])."));
         string result = HtnTerm::ToString(query->result(), false, true);
         CHECK_EQUAL("{\"d_named\":[{\"'Plage'\":[]}]}, {\"'!'\":[]}, {\"d_named\":[{\"'_flage'\":[]}]}, {\"d_named\":[{\"'Pla ge'\":[]}]}, {\"d_named\":[{\"'Pla!ge'\":[]}]}, {\"d_named\":[{\"pl_age\":[]}]}, {\"d_named\":[{\"pl1age\":[]}]}, {\"d_named\":[{\"12.4\":[]}]}, {\"d_named\":[{\"5\":[]}]}, {\"d_named\":[{\"'5a'\":[]}]}, {\"d_named\":[[]]}", result);
+        
+        // Double quoted strings should preserve their double quotes
+        query->Clear();
+        CHECK(query->Compile("vocabulary(\"blue\", Pred, Argcount, adjective, X)."));
+        result = HtnTerm::ToString(query->result(), false, true);
+        CHECK_EQUAL("{\"vocabulary\":[{\"\\\"blue\\\"\":[]},{\"Pred\":[]},{\"Argcount\":[]},{\"adjective\":[]},{\"X\":[]}]}", result);
     }
     
     TEST(HtnTermUniqueID)

@@ -370,7 +370,6 @@ public:
 // Structure is:
 // string *count - number of string *s. This is a fake string * that is really a count
 // string *[] - one string * for every term that points to its name, followed by a set of fake string *s that are from the StructureBuilder that represent the shape of the term
-//
 void HtnTerm::GetUniqueID(const string **buffer, const string **bufferEnd) const
 {
     StructureBuilder shape;
@@ -379,12 +378,12 @@ void HtnTerm::GetUniqueID(const string **buffer, const string **bufferEnd) const
     // first pointer value is actually the length
     const string **origBuffer = buffer;
     buffer++;
-    if(buffer == bufferEnd) StaticFailFastAssert(false);
+    if(buffer == bufferEnd) StaticFailFastAssertDesc(false, ("Too many terms, max = " + lexical_cast<string>(HtnTermFactory::MaxIndexTerms)).c_str());
     
     // Do the root
     *buffer = m_namePtr;
     buffer++;
-    if(buffer == bufferEnd) StaticFailFastAssert(false);
+    if(buffer == bufferEnd) StaticFailFastAssertDesc(false, ("Too many terms, max = " + lexical_cast<string>(HtnTermFactory::MaxIndexTerms)).c_str());
     
     if(m_arguments.size() > 0)
     {
@@ -406,7 +405,7 @@ void HtnTerm::GetUniqueID(const string **buffer, const string **bufferEnd) const
                 // Add this child's name
                 *buffer = next->m_namePtr;
                 buffer++;
-                if(buffer == bufferEnd) StaticFailFastAssert(false);
+                if(buffer == bufferEnd) StaticFailFastAssertDesc(false, ("Too many terms, max = " + lexical_cast<string>(HtnTermFactory::MaxIndexTerms)).c_str());
                 
                 if(next->m_arguments.size() > 0)
                 {
@@ -430,7 +429,7 @@ void HtnTerm::GetUniqueID(const string **buffer, const string **bufferEnd) const
     {
         *buffer = reinterpret_cast<string *>(data);
         buffer++;
-        if(buffer == bufferEnd) StaticFailFastAssertDesc(false, "Too many terms!");
+        if(buffer == bufferEnd) StaticFailFastAssertDesc(false, ("Too many terms, max = " + lexical_cast<string>(HtnTermFactory::MaxIndexTerms)).c_str());
     }
     
     // Put the size as the first "pointer"
@@ -879,13 +878,17 @@ string HtnTerm::ToString(bool isSecondTermInList, bool json)
                 }
                 else
                 {
+                    // If it starts and ends with a " then it is considered a string and we preserve the quote
+                    if(test[0] == '\"' && test[(int) test.length() - 1] == '\"')
+                    {
+                        stream << "{\"\\\"" << test.substr(1, (int) test.length() - 2) << "\\\"\":[]}";
+                    }
                     // If it starts with uppercase or _ it must be escaped or it gets confused with a variable
                     // otherwise we escape anything but A-Z and a-z and _
-                    if(!(test[0] >= 'a' && test[0] <= 'z') ||
+                    else if(!(test[0] >= 'a' && test[0] <= 'z') ||
                        (test.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_") != string::npos))
                     {
                         stream << "{\"'" << test << "'\":[]}";
-
                     }
                     else
                     {

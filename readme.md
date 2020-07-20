@@ -2,7 +2,8 @@ Inductor Hierarchical Task Network Engine For C++ and Python
 ============================================================
 This lightweight [Hierarchical Task Network](https://en.wikipedia.org/wiki/Hierarchical_task_network) engine was first used in production in an iPhone strategy game called [Exospecies](https://www.exospecies.com). Visit the [Exospecies Blog](https://blog.inductorsoftware.com) for more details.  It is designed to be small, memory constrained, and used as an implementation detail of an app. It used the classic [SHOP Planner](http://www.cs.umd.edu/projects/shop/description.html) as inspiration and largely followed that model.
 
-It can be used natively in C++ and it has bindings that support Python 3.x as well (using CTypes).
+It can be used natively in C++ and it has bindings that support Python 3.x as well (using CTypes). It has been built and tested on Windows, Mac, and Ubuntu Linux.
+
 Use and enjoy!
 
 
@@ -41,6 +42,7 @@ To run the Python tests:
 2. Make sure the indhtnpy.dll (or libindhtnpy.dylib on the mac) that gets built is on your path
 	- On windows check or set your PATH variable, 
 	- On the mac, I found it easiest to put it into usr/local/lib
+	- On Ubuntu Linux, /usr/lib worked well
 3. Get to the /src/Python directory
 4. Run "python PythonUsage.py"
 5. Look at the source for PythonUsage.py for basic usage instructions

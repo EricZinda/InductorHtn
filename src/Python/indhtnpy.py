@@ -120,19 +120,19 @@ class HtnPlanner(object):
     def __init__(self, debug=False):
         # Load the library
         if platform == "linux" or platform == "linux2":
-            libname = "/usr/lib/libindhtnpy.so"
+            libname = "libindhtnpy.so"
             self.indhtnLib = ctypes.CDLL(libname)
-        elif platform == "darwin":
-            # OS X
-            libname = "libindhtnpy.dylib"
-        elif platform == "win32":
-            # Windows...
-            libname = "./indhtnpy"
-        else:   
-            print("Unknown OS: {}".format(platform))
-            sys.exit()
+        else:
+            if platform == "darwin":
+                # OS X
+                libname = "libindhtnpy.dylib"
+            elif platform == "win32":
+                # Windows...
+                libname = "./indhtnpy"
+            else:   
+                print("Unknown OS: {}".format(platform))
+                sys.exit()
 
-        if self.indhtnLib is None:
             indhtnPath = ctypes.util.find_library(libname)
             if not indhtnPath:
                 print("Unable to find the indhtnpy library, please make sure it is on your path.")

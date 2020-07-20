@@ -119,8 +119,10 @@ def termToString(term):
 class HtnPlanner(object):
     def __init__(self, debug=False):
         # Load the library
-        if platform == "linux" or platform == "linux2" or platform == "darwin":
-            # linux
+        if platform == "linux" or platform == "linux2":
+            libname = "/usr/lib/libindhtnpy.so"
+            self.indhtnLib = ctypes.CDLL(libname)
+        elif platform == "darwin":
             # OS X
             libname = "libindhtnpy.dylib"
         elif platform == "win32":
@@ -130,15 +132,16 @@ class HtnPlanner(object):
             print("Unknown OS: {}".format(platform))
             sys.exit()
 
-        indhtnPath = ctypes.util.find_library(libname)
-        if not indhtnPath:
-            print("Unable to find the indhtnpy library, please make sure it is on your path.")
-            sys.exit()
-        try:
-            self.indhtnLib = ctypes.CDLL(indhtnPath)
-        except OSError:
-            print("Unable to load the indhtnpy library.")
-            sys.exit()
+        if self.indhtnLib is None:
+            indhtnPath = ctypes.util.find_library(libname)
+            if not indhtnPath:
+                print("Unable to find the indhtnpy library, please make sure it is on your path.")
+                sys.exit()
+            try:
+                self.indhtnLib = ctypes.CDLL(indhtnPath)
+            except OSError:
+                print("Unable to load the indhtnpy library.")
+                sys.exit()
 
         # Declare all the function metadata
         self.indhtnLib.SetMemoryBudget.argtypes = [ctypes.c_void_p, ctypes.c_int64]

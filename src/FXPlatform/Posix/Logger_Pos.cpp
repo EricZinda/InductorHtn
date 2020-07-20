@@ -7,9 +7,11 @@
 //
 #include "Logger.h"
 #include <memory>
+#include <iostream>
 
 void DebugLogMessage(int traceType, const TraceDetail levelOfDetail, const char *message)
 {
+	std::cout << message;
 }
 
 void DebugLogMessagesToFile(const std::string &filename)

@@ -6,6 +6,7 @@
 #include "LexerReader.h"
 #include <vector>
 #include <algorithm>
+#include <limits.h>
 
 //
 /*

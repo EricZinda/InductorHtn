@@ -7,6 +7,7 @@
 //
 #include "FileStream.h"
 #include "Logger.h"
+#include <memory>
 
 shared_ptr<FileStream> fileStream;
 

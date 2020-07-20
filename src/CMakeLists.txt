@@ -11,6 +11,10 @@ add_custom_command(TARGET runtests POST_BUILD
         $<TARGET_FILE_DIR:runtests>)
 
 add_executable(indhtn main.cpp)
+# this allows us to use our executable as a link library
+# therefore we can inherit all compiler options and library dependencies
+set_target_properties(indhtn PROPERTIES ENABLE_EXPORTS on)
+
 add_library(lib "")
 
 # Make the Python interface a dll as required by ctypes

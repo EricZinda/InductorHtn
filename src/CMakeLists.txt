@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.0.0)
 
 project(IndHtn CXX)
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_executable(runtests TestsMain.cpp)
 # this allows us to use our executable as a link library
@@ -48,6 +49,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     target_link_libraries(runtests testLib lib "-framework Foundation")
     add_subdirectory(FXPlatform/iOS)
 else()
+	target_link_libraries(runtests testLib lib)
     add_subdirectory(FXPlatform/Posix)
 endif()
 

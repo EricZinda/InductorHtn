@@ -8,7 +8,7 @@ add_executable(runtests TestsMain.cpp)
 # this allows us to use our executable as a link library
 # therefore we can inherit all compiler options and library dependencies
 set_target_properties(runtests PROPERTIES ENABLE_EXPORTS on)
-add_library(testLib SHARED "")
+add_library(testLib "")
 add_custom_command(TARGET runtests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${PROJECT_SOURCE_DIR}/Tests/Htn/DataFiles"
@@ -19,7 +19,7 @@ add_executable(indhtn main.cpp)
 # therefore we can inherit all compiler options and library dependencies
 set_target_properties(indhtn PROPERTIES ENABLE_EXPORTS on)
 
-add_library(lib SHARED "")
+add_library(lib "")
 
 # Make the Python interface a dll as required by ctypes
 # https://stackoverflow.com/questions/6499364/generating-dll-using-cmake

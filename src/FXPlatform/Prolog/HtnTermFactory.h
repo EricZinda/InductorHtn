@@ -8,6 +8,7 @@
 
 #ifndef HtnTermFactory_hpp
 #define HtnTermFactory_hpp
+#include <cstring>
 #include <map>
 #include <unordered_map>
 #include <string>

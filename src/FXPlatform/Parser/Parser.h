@@ -1,4 +1,6 @@
 #pragma once
+#include <cstring>
+#include<bits/stdc++.h> 
 #include "FXPlatform/FailFast.h"
 #include "FXPlatform/NanoTrace.h"
 #include <list>

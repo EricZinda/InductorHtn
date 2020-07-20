@@ -62,7 +62,7 @@ namespace FXPlat
         bool Compile(const string document)
         {
             shared_ptr<istream> stream = shared_ptr<istream>(new stringstream(document));
-            stream->setf(ios::binary);
+//            stream->setf(ios::binary);
             return Compile(stream);
         }
 

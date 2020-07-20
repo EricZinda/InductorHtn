@@ -1,5 +1,9 @@
 #pragma once
 #include "Parser.h"
+#include <istream>
+#include <iostream>
+#include <ios>
+
 
 namespace FXPlat
 {
@@ -83,8 +87,7 @@ namespace FXPlat
             deepestFailure = 0;
             shared_ptr<Lexer> lexer = shared_ptr<Lexer>(new Lexer());
             shared_ptr<istream> stream = shared_ptr<istream>(new stringstream(testString));
-            stream->setf(ios::binary);
-
+//	    stream->setf(ios::binary);
             lexer->Open(stream);
             shared_ptr<Symbol> symbol;
 

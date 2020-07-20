@@ -1,18 +1,18 @@
 target_sources(lib
     PRIVATE
-        Directory.h
-    	FailFast.h
-    	FailFast.cpp
-        FileStream.h
-        Logger.h
-    	NanoTrace.h
-    	NanoTrace.cpp
-    	ReflectionEnum.h
-        Stopwatch.h
-    	SystemTraceType.h
-        TraceError.h
-        Utilities.h
-    	Utilities.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/Directory.h
+    	${CMAKE_CURRENT_SOURCE_DIR}/FailFast.h
+    	${CMAKE_CURRENT_SOURCE_DIR}/FailFast.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/FileStream.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/Logger.h
+    	${CMAKE_CURRENT_SOURCE_DIR}/NanoTrace.h
+    	${CMAKE_CURRENT_SOURCE_DIR}/NanoTrace.cpp
+    	${CMAKE_CURRENT_SOURCE_DIR}/ReflectionEnum.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/Stopwatch.h
+    	${CMAKE_CURRENT_SOURCE_DIR}/SystemTraceType.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/TraceError.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/Utilities.h
+    	${CMAKE_CURRENT_SOURCE_DIR}/Utilities.cpp
 )
 target_include_directories(lib PRIVATE ./)
 target_include_directories(testLib PRIVATE ./)

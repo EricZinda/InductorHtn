@@ -1,5 +1,5 @@
 target_sources(runtests
     PRIVATE
-	ParserTestBase.h
+	   ${CMAKE_CURRENT_SOURCE_DIR}/ParserTestBase.h
 )
-target_include_directories(testLib PRIVATE ./)
+target_include_directories(testLib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/)

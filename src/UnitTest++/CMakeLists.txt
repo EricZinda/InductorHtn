@@ -1,44 +1,44 @@
 target_sources(testLib
     PRIVATE
-		AssertException.cpp
-		AssertException.h
-		CheckMacros.h
-		Checks.cpp
-		Checks.h
-		Config.h
-		CurrentTest.cpp
-		CurrentTest.h
-		DeferredTestReporter.cpp
-		DeferredTestReporter.h
-		DeferredTestResult.cpp
-		DeferredTestResult.h
-		ExecuteTest.h
-		MemoryOutStream.cpp
-		MemoryOutStream.h
-		ReportAssert.cpp
-		ReportAssert.h
-		Test.cpp
-		Test.h
-		TestDetails.cpp
-		TestDetails.h
-		TestList.cpp
-		TestList.h
-		TestMacros.h
-		TestReporter.cpp
-		TestReporter.h
-		TestReporterStdout.cpp
-		TestReporterStdout.h
-		TestResults.cpp
-		TestResults.h
-		TestRunner.cpp
-		TestRunner.h
-		TestSuite.h
-		TimeConstraint.cpp
-		TimeConstraint.h
-		TimeHelpers.h
-		UnitTest++.h
-		XmlTestReporter.cpp
-		XmlTestReporter.h
+		${CMAKE_CURRENT_SOURCE_DIR}/AssertException.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/AssertException.h
+		${CMAKE_CURRENT_SOURCE_DIR}/CheckMacros.h
+		${CMAKE_CURRENT_SOURCE_DIR}/Checks.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/Checks.h
+		${CMAKE_CURRENT_SOURCE_DIR}/Config.h
+		${CMAKE_CURRENT_SOURCE_DIR}/CurrentTest.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/CurrentTest.h
+		${CMAKE_CURRENT_SOURCE_DIR}/DeferredTestReporter.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/DeferredTestReporter.h
+		${CMAKE_CURRENT_SOURCE_DIR}/DeferredTestResult.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/DeferredTestResult.h
+		${CMAKE_CURRENT_SOURCE_DIR}/ExecuteTest.h
+		${CMAKE_CURRENT_SOURCE_DIR}/MemoryOutStream.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/MemoryOutStream.h
+		${CMAKE_CURRENT_SOURCE_DIR}/ReportAssert.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/ReportAssert.h
+		${CMAKE_CURRENT_SOURCE_DIR}/Test.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/Test.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TestDetails.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/TestDetails.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TestList.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/TestList.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TestMacros.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TestReporter.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/TestReporter.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TestReporterStdout.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/TestReporterStdout.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TestResults.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/TestResults.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TestRunner.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/TestRunner.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TestSuite.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TimeConstraint.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/TimeConstraint.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TimeHelpers.h
+		${CMAKE_CURRENT_SOURCE_DIR}/UnitTest++.h
+		${CMAKE_CURRENT_SOURCE_DIR}/XmlTestReporter.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/XmlTestReporter.h
 )
-target_include_directories(testLib PRIVATE ./)
-target_include_directories(runtests PRIVATE ./)
+target_include_directories(testLib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/)
+target_include_directories(runtests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/)

@@ -6,7 +6,7 @@
 //  Copyright © 2018 Eric Zinda. All rights reserved.
 //
 #include <iostream>
-#include "FXPlatform/FileStream.h"
+// #include "FXPlatform/FileStream.h"
 #include "FXPlatform/Logger.h"
 #include "FXPlatform/Prolog/HtnGoalResolver.h"
 #include "FXPlatform/Prolog/HtnRuleSet.h"
@@ -72,39 +72,39 @@ bool CheckSolutions(vector<UnifierType> solution, vector<UnifierType> expectedSo
     
 SUITE(HtnGoalResolverTests)
 {
-    TEST(AdventureScenarioTests)
-    {
-//        SetTraceFilter((int) SystemTraceType::Solver | (int) SystemTraceType::System, TraceDetail::Diagnostic);
+//     TEST(AdventureScenarioTests)
+//     {
+// //        SetTraceFilter((int) SystemTraceType::Solver | (int) SystemTraceType::System, TraceDetail::Diagnostic);
 
-        HtnGoalResolver resolver;
-        shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
-        shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
-        shared_ptr<PrologStandardCompiler> compiler = shared_ptr<PrologStandardCompiler>(new PrologStandardCompiler(factory.get(), state.get()));
-        shared_ptr<vector<UnifierType>> unifier;
-        string testState;
-        string sharedState;
-        string goals;
-        string finalUnifier;
-        string example;
-        int64_t highestMemoryUsedReturn;
-        int furthestFailureIndex;
-        std::vector<std::shared_ptr<HtnTerm>> farthestFailureContext;
+//         HtnGoalResolver resolver;
+//         shared_ptr<HtnTermFactory> factory = shared_ptr<HtnTermFactory>(new HtnTermFactory());
+//         shared_ptr<HtnRuleSet> state = shared_ptr<HtnRuleSet>(new HtnRuleSet());
+//         shared_ptr<PrologStandardCompiler> compiler = shared_ptr<PrologStandardCompiler>(new PrologStandardCompiler(factory.get(), state.get()));
+//         shared_ptr<vector<UnifierType>> unifier;
+//         string testState;
+//         string sharedState;
+//         string goals;
+//         string finalUnifier;
+//         string example;
+//         int64_t highestMemoryUsedReturn;
+//         int furthestFailureIndex;
+//         std::vector<std::shared_ptr<HtnTerm>> farthestFailureContext;
 
-        FileStream stream;
-        stream.Open("Adventure.pl", OpenExisting, Read);
-        example = stream.ReadAll();
-        testState = "";
+//         FileStream stream;
+//         stream.Open("Adventure.pl", OpenExisting, Read);
+//         example = stream.ReadAll();
+//         testState = "";
 
-        compiler->Clear();
-        goals = "goals(=(CreateOrEval, create), d_noun(place, X9005), d_pronoun(you, X9006), d_loc_nonsp(E9004, X9006, X9005, CreateOrEval)).";
-        CHECK(compiler->Compile(example + sharedState + testState + goals));
-        unifier = compiler->SolveGoals(&resolver, 1000000, &highestMemoryUsedReturn, &furthestFailureIndex, &farthestFailureContext);
-        finalUnifier = HtnGoalResolver::ToString(unifier.get());
-//        int64_t factorySize = factory->dynamicSize();
-//        CHECK_EQUAL(finalUnifier, "((?CreateOrEval = create, ?E9001 = id9007, ?X9002 = diamond1, ?X9003 = player))");
-//        CHECK_EQUAL(0, furthestFailureIndex);
-//        CHECK_EQUAL(0, farthestFailureContext.size());
-    }
+//         compiler->Clear();
+//         goals = "goals(=(CreateOrEval, create), d_noun(place, X9005), d_pronoun(you, X9006), d_loc_nonsp(E9004, X9006, X9005, CreateOrEval)).";
+//         CHECK(compiler->Compile(example + sharedState + testState + goals));
+//         unifier = compiler->SolveGoals(&resolver, 1000000, &highestMemoryUsedReturn, &furthestFailureIndex, &farthestFailureContext);
+//         finalUnifier = HtnGoalResolver::ToString(unifier.get());
+// //        int64_t factorySize = factory->dynamicSize();
+// //        CHECK_EQUAL(finalUnifier, "((?CreateOrEval = create, ?E9001 = id9007, ?X9002 = diamond1, ?X9003 = player))");
+// //        CHECK_EQUAL(0, furthestFailureIndex);
+// //        CHECK_EQUAL(0, farthestFailureContext.size());
+//     }
     
     TEST(GoalResolverFailureContextTest)
     {

@@ -1,6 +1,6 @@
 target_sources(testLib
     PRIVATE
-		TimeHelpers.cpp
-		TimeHelpers.h
+		${CMAKE_CURRENT_SOURCE_DIR}/TimeHelpers.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/TimeHelpers.h
 )
-target_include_directories(testLib PRIVATE ./)
+target_include_directories(testLib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/)

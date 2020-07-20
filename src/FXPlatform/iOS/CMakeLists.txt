@@ -1,8 +1,8 @@
 target_sources(lib
     PRIVATE
-    	Directory_iOS.mm
-    	FileStream_iOS.mm
-    	Logger_iOS.mm
-    	Stopwatch_iOS.cpp
-	TraceError_iOS.cpp
+    	${CMAKE_CURRENT_SOURCE_DIR}/Directory_iOS.mm
+    	${CMAKE_CURRENT_SOURCE_DIR}/FileStream_iOS.mm
+    	${CMAKE_CURRENT_SOURCE_DIR}/Logger_iOS.mm
+    	${CMAKE_CURRENT_SOURCE_DIR}/Stopwatch_iOS.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/TraceError_iOS.cpp
 )

@@ -14,6 +14,6 @@ target_sources(lib
         ${CMAKE_CURRENT_SOURCE_DIR}/Utilities.h
     	${CMAKE_CURRENT_SOURCE_DIR}/Utilities.cpp
 )
-target_include_directories(lib PRIVATE ./)
-target_include_directories(testLib PRIVATE ./)
-target_include_directories(runtests PRIVATE ./)
+target_include_directories(lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/)
+target_include_directories(testLib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/)
+target_include_directories(runtests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/)

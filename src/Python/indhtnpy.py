@@ -120,7 +120,7 @@ class HtnPlanner(object):
     def __init__(self, debug=False):
         # Load the library
         if platform == "linux" or platform == "linux2":
-            libname = "libindhtnpy.so"
+            libname = "/usr/bin/libindhtnpy.so"
             self.indhtnLib = ctypes.CDLL(libname)
         else:
             if platform == "darwin":

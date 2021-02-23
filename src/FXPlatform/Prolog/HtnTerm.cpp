@@ -559,7 +559,7 @@ shared_ptr<HtnTerm> HtnTerm::RemovePrefixFromVariables(HtnTermFactory *factory, 
     if(this->isVariable())
     {
         const string &variableName = this->name();
-        int pos = variableName.find(prefix);
+        int pos = (int) variableName.find(prefix);
         if(pos == 0)
         {
              return factory->CreateVariable(variableName.substr(prefix.size()));

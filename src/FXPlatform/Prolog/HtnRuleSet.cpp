@@ -76,7 +76,11 @@ void HtnRuleSet::AddRule(shared_ptr<HtnTerm> head, vector<shared_ptr<HtnTerm>> t
     m_sharedRules->AddRule(head, tail);
 }
 
-// For a given argument we have these cases that *could* work (if the terms are equivalent)
+// This is a quick test to get rid of obvious failures without having to do more work
+// it is just to improve performance
+//
+// For a given argument on a term we have these cases that *might* work (if the terms are equivalent)
+// Variable / Anything -> A variable can unify with anything
 // Constant / Constant -> If they are equal
 // Constant / Variable
 // Compound / Compound -> If they are equivalent
@@ -89,7 +93,11 @@ bool HtnRuleSet::CanPotentiallyUnify(const HtnTerm *term, const HtnTerm *ruleHea
         {
             HtnTerm *termArg = term->arguments()[index].get();
             HtnTerm *ruleHeadArg = ruleHead->arguments()[index].get();
-            if(termArg->isConstant())
+            if (termArg->isVariable())
+            {
+                // Yes, keep checking
+            }
+            else if(termArg->isConstant())
             {
                 // This arg is a constant
                 if(ruleHeadArg->isConstant())
@@ -124,6 +132,7 @@ bool HtnRuleSet::CanPotentiallyUnify(const HtnTerm *term, const HtnTerm *ruleHea
                     }
                 }
             }
+
             else if(termArg->isCompoundTerm())
             {
                 // Term arg is compound

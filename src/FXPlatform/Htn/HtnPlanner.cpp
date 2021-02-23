@@ -333,7 +333,7 @@ void PlanState::RecordFailure(int furthestCriteriaFailure, std::vector<std::shar
     if((this->stack->size() == this->deepestTaskFailure && (furthestCriteriaFailure > this->furthestCriteriaFailure)) ||
        ((int) stack->size() > this->deepestTaskFailure))
     {
-        this->deepestTaskFailure = stack->size();
+        this->deepestTaskFailure = (int) stack->size();
         this->furthestCriteriaFailure = furthestCriteriaFailure;
         this->furthestCriteriaFailureContext = criteriaFailureContext;
     }

@@ -14,3 +14,8 @@ void DebugLogMessage(int traceType, const TraceDetail levelOfDetail, const char 
 {
 	OutputDebugString(message);
 }
+
+
+void DebugLogMessagesToFile(const std::string &filename)
+{
+}

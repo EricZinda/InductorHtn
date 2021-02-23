@@ -161,7 +161,7 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
                 ptr->m_lastSolutions = ptr->m_planner->FindAllPlans(ptr->m_factory.get(),
                                                                     ptr->m_state,
                                                                     queryCompiler->result(),
-                                                                    ptr->m_budgetBytes,
+                                                                    (int) ptr->m_budgetBytes,
                                                                     &highestMemoryUsedReturn,
                                                                     &furthestFailureIndex,
                                                                     &farthestFailureContext);
@@ -310,7 +310,7 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
                                                                                           ptr->m_state.get(),
                                                                                           queryCompiler->result(),
                                                                                           0,
-                                                                                          ptr->m_budgetBytes,
+                                                                                          (int) ptr->m_budgetBytes,
                                                                                           &highestMemoryUsedReturn,
                                                                                           &furthestFailureIndex,
                                                                                           &farthestFailureContext);

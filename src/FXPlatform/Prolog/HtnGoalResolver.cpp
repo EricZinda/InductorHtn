@@ -1578,12 +1578,14 @@ void HtnGoalResolver::RuleDistinct(ResolveState *state)
                         // don't care
                         UnifierType &binding = (*solutions)[0];
                         map<string, int> variablePositions;
+                        int position = 0;
                         for(UnifierItemType item : binding)
                         {
                             string varName = item.first->name();
                             if(varName[0] != '_')
                             {
-                                variablePositions[varName] = variablePositions.size();
+                                variablePositions[varName] = position;
+                                position++;
                             }
                         }
                             

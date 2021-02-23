@@ -11,9 +11,11 @@ class TestFilter
     public:
     bool operator()(UnitTest::Test *test) const
     {
+        TraceString(string(test->m_details.testName), SystemTraceType::System, TraceDetail::Normal);
+
         // Return true if the test matches the criteria for a test you want to run. Examples:
         // Just run this one test:
-//        return strcmp(test->m_details.testName, "JsonTest") == 0;
+        //return strcmp(test->m_details.testName, "HtnGoalResolverDistinctTests") == 0;
         // Run just this suite of tests:
         //return strcmp(test->m_details.suiteName, "HtnPlannerTests") == 0;
         
@@ -26,8 +28,11 @@ int main (int argc, char *argv[])
 {
 	// Treat all FailFasts as exceptions when running tests so the process doesn't abort
 	TreatFailFastAsException(true);
-    SetTraceFilter((int)SystemTraceType::None, TraceDetail::Normal);
-//    SetTraceFilter((int)SystemTraceType::Solver | (int)SystemTraceType::Planner, TraceDetail::Diagnostic);
+    //SetTraceFilter((int)SystemTraceType::None, TraceDetail::Normal);
+
+    // Uncomment this to see detailed traces on stderr
+    //SetTraceFilter((int)SystemTraceType::Solver | (int)SystemTraceType::Planner | (int) SystemTraceType::System, TraceDetail::Diagnostic);
+    SetTraceFilter((int)SystemTraceType::System, TraceDetail::Diagnostic);
 
     TestReporterStdout reporter;
     TestRunner runner(reporter);

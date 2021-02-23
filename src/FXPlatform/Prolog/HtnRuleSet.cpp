@@ -84,7 +84,6 @@ void HtnRuleSet::AddRule(shared_ptr<HtnTerm> head, vector<shared_ptr<HtnTerm>> t
 // Constant / Constant -> If they are equal
 // Constant / Variable
 // Compound / Compound -> If they are equivalent
-
 bool HtnRuleSet::CanPotentiallyUnify(const HtnTerm *term, const HtnTerm *ruleHead) const
 {
     if(term->isEquivalentCompoundTerm(ruleHead) || (term->isConstant() && ruleHead->isConstant()))
@@ -153,8 +152,8 @@ bool HtnRuleSet::CanPotentiallyUnify(const HtnTerm *term, const HtnTerm *ruleHea
             }
             else
             {
-                // term can never be a variable
-                FXDebugAssert(false);
+                // Should always be a variable, compound or constant
+                FailFastAssert(false);
             }
         }
         

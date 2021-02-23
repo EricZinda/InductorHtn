@@ -28,11 +28,11 @@ int main (int argc, char *argv[])
 {
 	// Treat all FailFasts as exceptions when running tests so the process doesn't abort
 	TreatFailFastAsException(true);
-    //SetTraceFilter((int)SystemTraceType::None, TraceDetail::Normal);
+    SetTraceFilter((int)SystemTraceType::None, TraceDetail::Normal);
 
     // Uncomment this to see detailed traces on stderr
     //SetTraceFilter((int)SystemTraceType::Solver | (int)SystemTraceType::Planner | (int) SystemTraceType::System, TraceDetail::Diagnostic);
-    SetTraceFilter((int)SystemTraceType::System, TraceDetail::Diagnostic);
+//    SetTraceFilter((int)SystemTraceType::System, TraceDetail::Normal);
 
     TestReporterStdout reporter;
     TestRunner runner(reporter);

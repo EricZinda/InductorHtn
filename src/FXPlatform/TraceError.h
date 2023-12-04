@@ -25,7 +25,10 @@ public:
 
     ~TraceError()
     {
-        delete m_symbolList;
+        // Reported by @yzznw:
+        // Call free() since m_symbolList is malloc()'d by backtrace_symbols()
+        // as per: https://www.man7.org/linux/man-pages/man3/backtrace.3.html
+        free(m_symbolList);
         m_symbolList = nullptr;
     }
     

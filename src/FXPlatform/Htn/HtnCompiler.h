@@ -37,13 +37,13 @@ public:
     {
     }
 
-    virtual void Clear()
+    void Clear() override
     {
         PrologCompilerBase<VariableRule>::Clear();
         m_domain->ClearAll();
     }
 
-    virtual void ClearWithNewRuleSet()
+    void ClearWithNewRuleSet() override
     {
         PrologCompilerBase<VariableRule>::ClearWithNewRuleSet();
         m_domain->ClearAll();
@@ -78,7 +78,7 @@ public:
     
     // HTN Operators and methods are just Prolog rules interpreted in a special way
     // so we don't have to make up a new syntax
-    virtual void ParseRule(shared_ptr<Symbol> symbol)
+    void ParseRule(shared_ptr<Symbol> symbol) override
     {
         shared_ptr<Symbol> head = PrologCompilerBase<VariableRule>::GetChild(symbol, 0, -1);
         

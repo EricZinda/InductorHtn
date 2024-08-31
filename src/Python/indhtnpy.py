@@ -154,6 +154,12 @@ class HtnPlanner(object):
         self.indhtnLib.HtnCompile.restype = ctypes.POINTER(ctypes.c_char)
         self.indhtnLib.PrologCompile.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
         self.indhtnLib.PrologCompile.restype = ctypes.POINTER(ctypes.c_char)
+        self.indhtnLib.HtnCompileCustomVariables.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        self.indhtnLib.HtnCompileCustomVariables.restype = ctypes.POINTER(ctypes.c_char)
+        self.indhtnLib.PrologCompileCustomVariables.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        self.indhtnLib.PrologCompileCustomVariables.restype = ctypes.POINTER(ctypes.c_char)
+        self.indhtnLib.Compile.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        self.indhtnLib.Compile.restype = ctypes.POINTER(ctypes.c_char)
         self.indhtnLib.FreeString.argtypes = [ctypes.POINTER(ctypes.c_char)]
         self.indhtnLib.HtnFindAllPlans.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_char))]
         self.indhtnLib.HtnFindAllPlans.restype = ctypes.POINTER(ctypes.c_char)
@@ -197,12 +203,48 @@ class HtnPlanner(object):
             self.indhtnLib.FreeString(resultPtr)
             return resultBytes.decode()
         return resultBytes
+    
+    def HtnCompileCustomVariables(self, value):
+        startTime = perf_counter_ns()
+        resultPtr = self.indhtnLib.HtnCompileCustomVariables(self.obj, value.encode('UTF-8', 'strict'))
+        elapsedTimeNS = perf_counter_ns() - startTime
+        perfLogger.info("HtnCompileCustomVariables %s ms", str(elapsedTimeNS / 1000000))
+
+        resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
+        if resultBytes is not None:
+            self.indhtnLib.FreeString(resultPtr)
+            return resultBytes.decode()
+        return resultBytes
 
     def PrologCompile(self, value):
         startTime = perf_counter_ns()
         resultPtr = self.indhtnLib.PrologCompile(self.obj, value.encode('UTF-8', 'strict'))
         elapsedTimeNS = perf_counter_ns() - startTime
         perfLogger.info("PrologCompile %s ms", str(elapsedTimeNS / 1000000))
+
+        resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
+        if resultBytes is not None:
+            self.indhtnLib.FreeString(resultPtr)
+            return resultBytes.decode()
+        return resultBytes
+
+    def PrologCompileCustomVariables(self, value):
+        startTime = perf_counter_ns()
+        resultPtr = self.indhtnLib.PrologCompileCustomVariables(self.obj, value.encode('UTF-8', 'strict'))
+        elapsedTimeNS = perf_counter_ns() - startTime
+        perfLogger.info("PrologCompileCustomVariables %s ms", str(elapsedTimeNS / 1000000))
+
+        resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
+        if resultBytes is not None:
+            self.indhtnLib.FreeString(resultPtr)
+            return resultBytes.decode()
+        return resultBytes
+
+    def Compile(self, value):
+        startTime = perf_counter_ns()
+        resultPtr = self.indhtnLib.Compile(self.obj, value.encode('UTF-8', 'strict'))
+        elapsedTimeNS = perf_counter_ns() - startTime
+        perfLogger.info("PrologCompileCustomVariables %s ms", str(elapsedTimeNS / 1000000))
 
         resultBytes = ctypes.c_char_p.from_buffer(resultPtr).value
         if resultBytes is not None:

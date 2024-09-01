@@ -12,7 +12,7 @@ indhtn is designed to be built with [CMake](https://cmake.org) like this:
 
 1. [Install CMake on your machine](https://cmake.org/install/)
 	- Ubuntu: apt-get install cmake
-2. Go to the root of the indprolog repository and create a build directory. 
+2. Go to the root of the InductorHtn repository and create a build directory. 
 	- unix: `mkdir build`
 	- win: `md build`
 3. Change to that directory.

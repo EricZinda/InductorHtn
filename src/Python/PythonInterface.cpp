@@ -214,7 +214,7 @@ extern "C"  //Tells the compile to use C-linkage for the next scope.
             string programString = string(data);
             if (!ptr->m_prologCompiler->Compile(programString))
             {
-                return GetCharPtrFromString(ptr->m_compiler->GetErrorString());
+                return GetCharPtrFromString(ptr->m_prologCompiler->GetErrorString());
             }
             else
             {
